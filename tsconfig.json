@@ -3,7 +3,10 @@
     "module": "nodenext",
     "target": "esnext",
     "moduleResolution": "nodenext",
-    "types": ["jest", "node"],
+    "types": [
+      "jest",
+      "node"
+    ],
     "sourceMap": true,
     "declaration": true,
     "declarationMap": true,
@@ -17,6 +20,15 @@
     "moduleDetection": "force",
     "skipLibCheck": true,
     "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true
-  }
+    "allowSyntheticDefaultImports": true,
+    "outDir": "dist",
+    "rootDir": "src"
+  },
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "tests"
+  ]
 }
