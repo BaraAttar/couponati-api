@@ -1,6 +1,7 @@
-import { Schema, model, Document } from 'mongoose';
+import { Schema, model, Document, Types } from 'mongoose';
 
 export interface Banner extends Document {
+  _id: Types.ObjectId; 
   name: string;
   image: string;
   link?: string;
@@ -12,6 +13,7 @@ export interface Banner extends Document {
 
 const bannerSchema = new Schema<Banner>(
   {
+
     name: {
       type: String,
       required: true,
@@ -37,7 +39,7 @@ const bannerSchema = new Schema<Banner>(
     },
   },
   {
-    timestamps: true, 
+    timestamps: true,
   }
 );
 

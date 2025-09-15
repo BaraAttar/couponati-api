@@ -1,69 +1,141 @@
-// tests/banner.integration.test.ts
-import request from "supertest";
-import app, { closeServer } from "../src/server.js";
-import { describe, beforeAll, afterAll, beforeEach, it, expect } from '@jest/globals';
-import { clearDB, connectDB, disconnectDB } from "../src/database/connection.js";
+import request from 'supertest';
+import mongoose from 'mongoose';
+import { MongoMemoryServer } from 'mongodb-memory-server';
+import { app } from '../src/server.js';
+import { Banner } from '../src/models/Banner.model.js';
 
-describe("Banner API Integration Tests", () => {
-  let bannerId: string;
+let mongoServer: MongoMemoryServer;
 
-  beforeAll(async () => {
-    console.log = () => { };
-    process.env.DOTENV_CONFIG_DEBUG = 'false';
-    await connectDB();
+const createBanner = async (overrides = {}) => {
+  const data = {
+    name: `Banner-${Math.random()}`,
+    image: 'https://example.com/banner.jpg',
+    active: true,
+    order: 1,
+    ...overrides,
+  };
+  return Banner.create(data);
+};
+
+beforeAll(async () => {
+  mongoServer = await MongoMemoryServer.create();
+  const mongoUri = mongoServer.getUri();
+  await mongoose.connect(mongoUri);
+});
+
+afterAll(async () => {
+  await mongoose.disconnect();
+  await mongoServer.stop();
+});
+
+afterEach(async () => {
+  await Banner.deleteMany({});
+});
+
+describe('Banner API', () => {
+
+  describe('Create Banner', () => {
+    it('should create a new banner', async () => {
+      const res = await request(app).post('/banner').send({
+        name: 'Test Banner',
+        image: 'https://example.com/banner.jpg',
+        active: true,
+        order: 1
+      });
+      expect(res.status).toBe(201);
+      expect(res.body.success).toBe(true);
+    });
+
+    it('should fail if name or image missing', async () => {
+      const res = await request(app).post('/banner').send({ name: '' });
+      expect(res.status).toBe(400);
+    });
+
+    it('should fail if image URL invalid', async () => {
+      const res = await request(app).post('/banner').send({
+        name: 'B',
+        image: 'not-a-url'
+      });
+      expect(res.status).toBe(400);
+    });
+
+    it('should fail if name duplicated', async () => {
+      await createBanner({ name: 'DupBanner' });
+      const res = await request(app).post('/banner').send({
+        name: 'DupBanner',
+        image: 'https://example.com/banner.jpg'
+      });
+      expect(res.status).toBe(400);
+    });
   });
 
-  afterAll(async () => {
-    await clearDB();
-    await disconnectDB();
-    await closeServer();
+  describe('Read Banners', () => {
+    it('should return all banners', async () => {
+      await createBanner({ name: 'B1' });
+      await createBanner({ name: 'B2' });
+      const res = await request(app).get('/banner');
+      expect(res.status).toBe(200);
+      expect(res.body.data.length).toBe(2);
+    });
+
+    it('should return a banner by ID', async () => {
+      const banner = await createBanner();
+      const res = await request(app).get(`/banner/${banner._id}`);
+      expect(res.status).toBe(200);
+    });
+
+    it('should fail with invalid ID format', async () => {
+      const res = await request(app).get('/banner/123');
+      expect(res.status).toBe(400);
+    });
+
+    it('should return 404 for non-existing ID', async () => {
+      const fakeId = new mongoose.Types.ObjectId();
+      const res = await request(app).get(`/banner/${fakeId}`);
+      expect(res.status).toBe(404);
+    });
   });
 
-  it("should create a new banner", async () => {
-    const createRes = await request(app)
-      .post("/banners")
-      .send({ name: "Test Banner", image: "https://example.com/banner.jpg" });
+  describe('Update Banner', () => {
+    it('should update a banner', async () => {
+      const banner = await createBanner({ name: 'OldName' });
+      const res = await request(app).put(`/banner/${banner._id}`).send({ name: 'NewName' });
+      expect(res.status).toBe(200);
+      expect(res.body.data.name).toBe('NewName');
+    });
 
-    expect(createRes.status).toBe(201);
-    expect(createRes.body.success).toBe(true);
-    expect(createRes.body.data.name).toBe("Test Banner");
-    bannerId = createRes.body.data._id;
+    it('should fail if new name duplicated', async () => {
+      const b1 = await createBanner({ name: 'B1' });
+      const b2 = await createBanner({ name: 'B2' });
+      const res = await request(app).put(`/banner/${b2._id}`).send({ name: 'B1' });
+      expect(res.status).toBe(400);
+    });
+
+    it('should fail with invalid ID', async () => {
+      const res = await request(app).put('/banner/123').send({ name: 'X' });
+      expect(res.status).toBe(400);
+    });
   });
 
-  it("should fetch all banners", async () => {
-    const res = await request(app).get("/banners");
-    expect(res.status).toBe(200);
-    expect(res.body.success).toBe(true);
-    expect(Array.isArray(res.body.data)).toBe(true);
-    expect(res.body.data.length).toBeGreaterThan(0);
+  describe('Delete Banner', () => {
+    it('should delete a banner', async () => {
+      const banner = await createBanner();
+      const res = await request(app).delete(`/banner/${banner._id}`);
+      expect(res.status).toBe(200);
+      const found = await Banner.findById(banner._id);
+      expect(found).toBeNull();
+    });
+
+    it('should fail with invalid ID', async () => {
+      const res = await request(app).delete('/banner/123');
+      expect(res.status).toBe(400);
+    });
+
+    it('should return 404 for non-existing banner', async () => {
+      const fakeId = new mongoose.Types.ObjectId();
+      const res = await request(app).delete(`/banner/${fakeId}`);
+      expect(res.status).toBe(404);
+    });
   });
 
-  it("should update a banner", async () => {
-    const res = await request(app)
-      .put(`/banners/${bannerId}`)
-      .send({ name: "Updated Banner" });
-    console.debug(res.error);
-
-    expect(res.status).toBe(200);
-    expect(res.body.success).toBe(true);
-    expect(res.body.data.name).toBe("Updated Banner");
-  });
-
-  it("should delete a banner", async () => {
-    const res = await request(app).delete(`/banners/${bannerId}`);
-    expect(res.status).toBe(200);
-    expect(res.body.success).toBe(true);
-  });
-
-  it("should return 404 for deleted banner", async () => {
-    const res = await request(app).get(`/banners/${bannerId}`);
-    expect(res.status).toBe(404);
-  });
-
-  it("should handle invalid ID format", async () => {
-    const res = await request(app).delete("/banners/invalid-id");
-    expect(res.status).toBe(404);
-    expect(res.body.success).toBe(false);
-    expect(res.body.message).toBe("Invalid ID format");
-  });
 });

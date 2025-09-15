@@ -8,6 +8,7 @@ export default {
       useESM: true
     }],
   },
+  // collectCoverage: true,
   roots: ['<rootDir>/tests', '<rootDir>/src'],
   testMatch: ['**/tests/**/*.test.ts'],
   extensionsToTreatAsEsm: ['.ts'],
