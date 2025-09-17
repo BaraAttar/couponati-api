@@ -26,6 +26,7 @@ export const getStores = async (req: Request, res: Response): Promise<void> => {
 
         const stores = await Store.find(filter)
             .populate('category', 'name')
+            .populate('coupons')
             .sort({ order: 1, createdAt: -1 });
 
         res.status(200).json({

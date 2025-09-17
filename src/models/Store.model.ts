@@ -49,6 +49,15 @@ storeSchema.pre<Store>('save', async function (next) {
     }
 });
 
+storeSchema.virtual('coupons', {
+    ref: 'Coupon',
+    localField: '_id',
+    foreignField: 'store',
+});
+
+storeSchema.set('toJSON', { virtuals: true });
+storeSchema.set('toObject', { virtuals: true });
+
 // إضافة index مركب للأداء الأفضل
 storeSchema.index({ active: 1, order: 1 });
 storeSchema.index({ category: 1, active: 1 });
