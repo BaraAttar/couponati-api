@@ -6,6 +6,11 @@ import { isValidObjectId } from "mongoose";
 // ✅ Get all stores
 export const getStores = async (req: Request, res: Response): Promise<void> => {
     try {
+        const page = parseInt((req.query.page as string) || "1");
+        const limit = 20;
+        const skipped = (page - 1) * limit;
+
+
         const { active, category } = req.query;
         const filter: any = {};
 
@@ -24,16 +29,23 @@ export const getStores = async (req: Request, res: Response): Promise<void> => {
             filter.category = category;
         }
 
+        const totalCount = await Store.countDocuments(filter);
+        const remaining = Math.max(totalCount - skipped - limit, 0);
+
         const stores = await Store.find(filter)
             .populate('category', 'name')
             .populate('coupons')
-            .sort({ order: 1, createdAt: -1 });
+            .skip((page - 1) * limit)
+            .limit(limit)
+            .sort({ order: 1, createdAt: -1 })
 
         res.status(200).json({
             success: true,
             message: stores.length > 0 ? "Stores retrieved successfully" : "No stores found",
             data: stores,
-            count: stores.length
+            pageCount: stores.length,
+            totalCount,
+            remaining
         });
     } catch (error) {
         console.error("getStores error:", error);
@@ -244,7 +256,6 @@ export const updateStore = async (req: Request, res: Response): Promise<void> =>
                 runValidators: true,
             }
         ).populate('category', 'name description')
-        // .populate('coupons', 'title code discount expiryDate active');
 
         res.status(200).json({
             success: true,
@@ -314,7 +325,7 @@ export const deleteStore = async (req: Request, res: Response): Promise<void> =>
     }
 }
 
-// ✅ Eeactivate store
+// ✅ Deactivate store
 export const deactivateStore = async (req: Request, res: Response): Promise<void> => {
     try {
         const { id } = req.params;
