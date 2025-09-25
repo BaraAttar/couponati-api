@@ -10,8 +10,7 @@ export const getStores = async (req: Request, res: Response): Promise<void> => {
         const limit = 20;
         const skipped = (page - 1) * limit;
 
-
-        const { active, category } = req.query;
+        const { active, category, name } = req.query;
         const filter: any = {};
 
         if (active !== undefined) {
@@ -27,6 +26,15 @@ export const getStores = async (req: Request, res: Response): Promise<void> => {
                 return;
             }
             filter.category = category;
+        }
+
+        if (name) {
+            // filter.$or = [
+            //     { name_ar: { $regex: name as string, $options: 'i' } },
+            //     { name_en: { $regex: name as string, $options: 'i' } },
+            // ];
+            filter.name = { $regex: name as string, $options: 'i' };
+
         }
 
         const totalCount = await Store.countDocuments(filter);
