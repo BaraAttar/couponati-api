@@ -1,0 +1,72 @@
+import dotenv from 'dotenv';
+dotenv.config();
+
+import type { Request, Response } from "express";
+import { verifyGoogleToken } from '../services/googleService.js';
+import jwt from "jsonwebtoken";
+import { User } from '../models/User.model.js';
+
+export const googleLogin = async (req: Request, res: Response) => {
+    const { idToken } = req.body
+    if (!idToken) return res.status(400).json({ error: 'No idToken provided' });
+
+    try {
+        const payload = await verifyGoogleToken(idToken);
+        if (!payload || !payload.sub) {
+            return res.status(401).json({
+                success: false,
+                message: 'Invalid token payload'
+            });
+        }
+
+        console.log(payload)
+        const googleId = payload.sub;
+        const email = payload.email;
+        const firstName = payload.given_name;
+        const lastName = payload.family_name;
+        const picture = payload.picture;
+        if (!email) return res.status(400).json({ success: false, message: "Email not provided by Google" });
+
+        // findOrCreate
+        const user = await User.findOneAndUpdate(
+            { googleId },
+            {
+                googleId,
+                email,
+                firstName,
+                lastName,
+                picture
+            },
+            { new: true, upsert: true }
+        )
+
+
+        const token = jwt.sign(
+            { googleId, email, firstName, lastName, picture },
+            process.env.JWT_SECRET as string,
+            { expiresIn: "1000d" }
+        );
+
+
+        res.status(200).json({
+            success: true,
+            message: "google logged in successfuly",
+            data: {
+                user: {
+                    googleId: user.googleId,
+                    email: user.email,
+                    firstName: user.firstName,
+                    lastName: user.lastName,
+                    picture: user.picture
+                },
+                token
+            }
+        })
+    } catch (err) {
+        console.error('googleLogin error:', err);
+        res.status(500).json({
+            success: false,
+            message: 'Server error'
+        });
+    }
+};

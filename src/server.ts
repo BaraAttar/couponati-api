@@ -13,6 +13,7 @@ import type { Server } from 'node:http';
 import { connectDB } from './database/connection.js';
 
 // Routes
+import authRoutes from "./routes/auth.routes.js"
 import bannerRoutes from "./routes/banner.routes.js"
 import categoryRoutes from "./routes/category.routes.js"
 import storeRoutes from "./routes/store.routes.js"
@@ -36,6 +37,7 @@ app.get('/error-test', () => {
     throw new Error('Forced error');
 });
 
+app.use("/auth", authRoutes);
 app.use("/banner", bannerRoutes);
 app.use("/category", categoryRoutes);
 app.use("/store", storeRoutes);
@@ -66,15 +68,3 @@ if (process.env.NODE_ENV != "test") {
         });
     });
 }
-
-
-// حذف هذا نهائيا
-// export const closeServer = async (server: Server): Promise<void> => {
-//     await new Promise<void>((resolve, reject) => {
-//         server.close((err) => {
-//             if (err) return reject(err);
-//             resolve();
-//         });
-//     });
-//     await disconnectDB();
-// };

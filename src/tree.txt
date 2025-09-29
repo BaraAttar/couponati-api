@@ -1,0 +1,25 @@
+.
+├── controllers
+│   ├── auth.controller.ts
+│   ├── banner.controller.ts
+│   ├── category.controller.ts
+│   ├── coupon.controller.ts
+│   └── store.controller.ts
+├── database
+│   └── connection.ts
+├── models
+│   ├── Banner.model.ts
+│   ├── Category.model.ts
+│   ├── Coupon.model.ts
+│   ├── Store.model.ts
+│   └── User.model.ts
+├── routes
+│   ├── auth.routes.ts
+│   ├── banner.routes.ts
+│   ├── category.routes.ts
+│   ├── coupon.routes.ts
+│   └── store.routes.ts
+├── server.ts
+└── tree.txt
+
+5 directories, 18 files
