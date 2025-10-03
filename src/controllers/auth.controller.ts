@@ -19,7 +19,7 @@ export const googleLogin = async (req: Request, res: Response) => {
             });
         }
 
-        console.log(payload)
+        // console.log(payload)
         const googleId = payload.sub;
         const email = payload.email;
         const firstName = payload.given_name;
@@ -38,7 +38,7 @@ export const googleLogin = async (req: Request, res: Response) => {
                 picture
             },
             { new: true, upsert: true }
-        )
+        ).populate('favourites');
 
 
         const token = jwt.sign(
@@ -48,7 +48,9 @@ export const googleLogin = async (req: Request, res: Response) => {
         );
 
 
-        res.status(200).json({
+        console.log(user)
+
+        return res.status(200).json({
             success: true,
             message: "google logged in successfuly",
             data: {
@@ -57,16 +59,48 @@ export const googleLogin = async (req: Request, res: Response) => {
                     email: user.email,
                     firstName: user.firstName,
                     lastName: user.lastName,
-                    picture: user.picture
+                    picture: user.picture,
+                    favourites: user.favourites
                 },
                 token
             }
         })
     } catch (err) {
         console.error('googleLogin error:', err);
-        res.status(500).json({
+        return res.status(500).json({
             success: false,
             message: 'Server error'
         });
     }
 };
+
+// TODO:
+export const verifyToken = async (req: Request, res: Response) => {
+    const tokenUser = req.user;
+    if (!tokenUser) {
+        return res.status(401).json({
+            success: false,
+            message: "Unauthorized: user payload required"
+        })
+    }
+    try {
+        const dbUser = await User.findOne({ googleId: tokenUser.googleId });
+        if (!dbUser) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found in database"
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: "User retrieved successfully",
+            data: {
+                user: dbUser
+            }
+        });
+    } catch (err) {
+        console.error('verifyToken error:', err);
+        return res.status(500).json({ success: false, message: "Database error" });
+    }
+}

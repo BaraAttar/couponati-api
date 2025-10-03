@@ -4,7 +4,7 @@ import { Category } from "../models/Category.model.js";
 import { isValidObjectId } from "mongoose";
 
 // ✅ Get all stores
-export const getStores = async (req: Request, res: Response): Promise<void> => {
+export const getStores = async (req: Request, res: Response) => {
     try {
         const page = parseInt((req.query.page as string) || "1");
         const limit = 20;
@@ -19,11 +19,10 @@ export const getStores = async (req: Request, res: Response): Promise<void> => {
 
         if (category) {
             if (!isValidObjectId(category)) {
-                res.status(400).json({
+                return res.status(400).json({
                     success: false,
                     message: "Invalid category ID format",
                 });
-                return;
             }
             filter.category = category;
         }
@@ -57,7 +56,7 @@ export const getStores = async (req: Request, res: Response): Promise<void> => {
         });
     } catch (error) {
         console.error("getStores error:", error);
-        res.status(500).json({
+        return res.status(500).json({
             success: false,
             message: "Server error",
             error: process.env.NODE_ENV === "development" ? error : undefined,
@@ -65,37 +64,35 @@ export const getStores = async (req: Request, res: Response): Promise<void> => {
     }
 }
 
-export const getStoreById = async (req: Request, res: Response): Promise<void> => {
+export const getStoreById = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
 
         if (!isValidObjectId(id)) {
-            res.status(400).json({
+            return res.status(400).json({
                 success: false,
                 message: "Invalid store ID format",
             });
-            return;
         }
 
         const store = await Store.findById(id)
             .populate('category', 'name')
 
         if (!store) {
-            res.status(404).json({
+            return res.status(404).json({
                 success: false,
                 message: "Store not found",
             });
-            return;
         }
 
-        res.status(200).json({
+        return res.status(200).json({
             success: true,
             message: "Store retrieved successfully",
             data: store,
         });
     } catch (error) {
         console.error("getStoreById error:", error);
-        res.status(500).json({
+        return res.status(500).json({
             success: false,
             message: "Server error",
             error: process.env.NODE_ENV === "development" ? error : undefined,
@@ -104,36 +101,33 @@ export const getStoreById = async (req: Request, res: Response): Promise<void> =
 }
 
 // ✅ Create new store 
-export const createStore = async (req: Request, res: Response): Promise<void> => {
+export const createStore = async (req: Request, res: Response) => {
     try {
         const { name, icon, banner, description, link, active, order, category } = req.body;
 
         // التحقق من الحقول المطلوبة
         if (!name?.trim() || !category) {
-            res.status(400).json({
+            return res.status(400).json({
                 success: false,
                 message: "Store name and category are required",
             });
-            return;
         }
 
         // التحقق من صحة category ID
         if (!isValidObjectId(category)) {
-            res.status(400).json({
+            return res.status(400).json({
                 success: false,
                 message: "Invalid category ID format",
             });
-            return;
         }
 
         // التحقق من وجود الفئة
         const categoryExists = await Category.findById(category);
         if (!categoryExists) {
-            res.status(404).json({
+            return res.status(404).json({
                 success: false,
                 message: "Category not found",
             });
-            return;
         }
 
         // التحقق من عدم تكرار الاسم في نفس الفئة
@@ -142,11 +136,10 @@ export const createStore = async (req: Request, res: Response): Promise<void> =>
             category
         });
         if (existingStore) {
-            res.status(409).json({
+            return res.status(409).json({
                 success: false,
                 message: "Store with this name already exists in this category",
             });
-            return;
         }
 
         // إنشاء المتجر الجديد
@@ -167,14 +160,14 @@ export const createStore = async (req: Request, res: Response): Promise<void> =>
         const populatedStore = await Store.findById(savedStore._id)
             .populate('category', 'name description')
 
-        res.status(201).json({
+        return res.status(201).json({
             success: true,
             message: "Store created successfully",
             data: populatedStore,
         });
     } catch (error) {
         console.error("createStore error:", error);
-        res.status(500).json({
+        return res.status(500).json({
             success: false,
             message: "Server error",
             error: process.env.NODE_ENV === "development" ? error : undefined,
@@ -183,48 +176,44 @@ export const createStore = async (req: Request, res: Response): Promise<void> =>
 }
 
 // ✅ Update store 
-export const updateStore = async (req: Request, res: Response): Promise<void> => {
+export const updateStore = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
         const { name, icon, banner, description, link, active, order, category } = req.body;
 
 
         if (!isValidObjectId(id)) {
-            res.status(400).json({
+            return res.status(400).json({
                 success: false,
                 message: "Invalid store ID format",
             });
-            return;
         }
 
         // التحقق من صحة category ID إذا تم توفيره
         if (category && !isValidObjectId(category)) {
-            res.status(400).json({
+            return res.status(400).json({
                 success: false,
                 message: "Invalid category ID format",
             });
-            return;
         }
 
         // التحقق من وجود المتجر
         const existingStore = await Store.findById(id);
         if (!existingStore) {
-            res.status(404).json({
+            return res.status(404).json({
                 success: false,
                 message: "Store not found",
             });
-            return;
         }
 
         // التحقق من وجود الفئة إذا تم تحديثها
         if (category && category !== existingStore.category.toString()) {
             const categoryExists = await Category.findById(category);
             if (!categoryExists) {
-                res.status(404).json({
+                return res.status(404).json({
                     success: false,
                     message: "Category not found",
                 });
-                return;
             }
         }
 
@@ -236,11 +225,10 @@ export const updateStore = async (req: Request, res: Response): Promise<void> =>
                 _id: { $ne: id }
             });
             if (duplicateStore) {
-                res.status(409).json({
+                return res.status(409).json({
                     success: false,
                     message: "Store with this name already exists in this category",
                 });
-                return;
             }
         }
 
@@ -265,14 +253,14 @@ export const updateStore = async (req: Request, res: Response): Promise<void> =>
             }
         ).populate('category', 'name description')
 
-        res.status(200).json({
+        return res.status(200).json({
             success: true,
             message: "Store updated successfully",
             data: updatedStore,
         });
     } catch (error) {
         console.error("updateStore error:", error);
-        res.status(500).json({
+        return res.status(500).json({
             success: false,
             message: "Server error",
             error: process.env.NODE_ENV === "development" ? error : undefined,
@@ -281,42 +269,39 @@ export const updateStore = async (req: Request, res: Response): Promise<void> =>
 }
 
 // ✅ Delete store
-export const deleteStore = async (req: Request, res: Response): Promise<void> => {
+export const deleteStore = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
         const { name } = req.body;
 
 
         if (!isValidObjectId(id)) {
-            res.status(400).json({
+            return res.status(400).json({
                 success: false,
                 message: "Invalid store ID format",
             });
-            return;
         }
 
         const store = await Store.findById(id)
             .populate('category', 'name')
 
         if (!store) {
-            res.status(404).json({
+            return res.status(404).json({
                 success: false,
                 message: "Store not found",
             });
-            return;
         }
 
         if (!name?.trim() || name.trim() !== store.name) {
-            res.status(400).json({
+            return res.status(400).json({
                 success: false,
                 message: "Store name does not match. Please provide the exact name to confirm deletion.",
             });
-            return;
         }
 
         await Store.findByIdAndDelete(id);
 
-        res.status(200).json({
+        return res.status(200).json({
             success: true,
             message: "Store deleted successfully",
             data: {
@@ -325,7 +310,7 @@ export const deleteStore = async (req: Request, res: Response): Promise<void> =>
         });
     } catch (error) {
         console.error("deleteStore error:", error);
-        res.status(500).json({
+        return res.status(500).json({
             success: false,
             message: "Server error",
             error: process.env.NODE_ENV === "development" ? error : undefined,
@@ -334,25 +319,23 @@ export const deleteStore = async (req: Request, res: Response): Promise<void> =>
 }
 
 // ✅ Deactivate store
-export const deactivateStore = async (req: Request, res: Response): Promise<void> => {
+export const deactivateStore = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
 
         if (!isValidObjectId(id)) {
-            res.status(400).json({
+            return res.status(400).json({
                 success: false,
                 message: "Invalid store ID format",
             });
-            return;
         }
 
         const existingStore = await Store.findById(id);
         if (!existingStore) {
-            res.status(404).json({
+            return res.status(404).json({
                 success: false,
                 message: "Store not found",
             });
-            return;
         }
 
         const updatedStore = await Store.findByIdAndUpdate(
@@ -361,14 +344,14 @@ export const deactivateStore = async (req: Request, res: Response): Promise<void
             { new: true, runValidators: true }
         ).populate('category', 'name')
 
-        res.status(200).json({
+        return res.status(200).json({
             success: true,
             message: "Store deactivated successfully",
             data: updatedStore,
         });
     } catch (error) {
         console.error("deactivateStore error:", error);
-        res.status(500).json({
+        return res.status(500).json({
             success: false,
             message: "Server error",
             error: process.env.NODE_ENV === "development" ? error : undefined,
@@ -377,25 +360,23 @@ export const deactivateStore = async (req: Request, res: Response): Promise<void
 }
 
 // ✅ Activate store
-export const activateStore = async (req: Request, res: Response): Promise<void> => {
+export const activateStore = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
 
         if (!isValidObjectId(id)) {
-            res.status(400).json({
+            return res.status(400).json({
                 success: false,
                 message: "Invalid store ID format",
             });
-            return;
         }
 
         const existingStore = await Store.findById(id);
         if (!existingStore) {
-            res.status(404).json({
+            return res.status(404).json({
                 success: false,
                 message: "Store not found",
             });
-            return;
         }
 
         const updatedStore = await Store.findByIdAndUpdate(
@@ -404,14 +385,14 @@ export const activateStore = async (req: Request, res: Response): Promise<void> 
             { new: true, runValidators: true }
         ).populate('category', 'name')
 
-        res.status(200).json({
+        return res.status(200).json({
             success: true,
             message: "Store activated successfully",
             data: updatedStore,
         });
     } catch (error) {
         console.error("activateStore error:", error);
-        res.status(500).json({
+        return res.status(500).json({
             success: false,
             message: "Server error",
             error: process.env.NODE_ENV === "development" ? error : undefined,

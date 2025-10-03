@@ -4,84 +4,80 @@ import { isValidObjectId } from "mongoose";
 
 
 // ✅ Get all categories 
-export const getCategories = async (req: Request, res: Response): Promise<void> => {
+export const getCategories = async (req: Request, res: Response) => {
     try {
         const categories = await Category.find().sort({ order: 1 });
-        res.status(200).json({
+        return res.status(200).json({
             success: true,
             message: "Categories retrieved successfully",
             count: categories.length,
             data: categories,
         });
     } catch (error) {
-        res.status(500).json({ success: false, message: "Server error", error });
+        return res.status(500).json({ success: false, message: "Server error", error });
     }
 };
 
 // ✅ Get single category 
-export const getCategoryById = async (req: Request, res: Response): Promise<void> => {
+export const getCategoryById = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
 
         if (!isValidObjectId(id)) {
-            res.status(400).json({
+            return res.status(400).json({
                 success: false,
                 message: "Invalid store ID format",
             });
-            return;
         }
 
         const category = await Category.findById(id);
         if (!category) {
-            res.status(404).json({ success: false, message: "Category not found" });
-            return;
+            return res.status(404).json({ success: false, message: "Category not found" });
         }
 
-        res.status(200).json({
+        return res.status(200).json({
             success: true,
             message: "Category retrieved successfully",
             data: category,
         });
     } catch (error) {
-        res.status(500).json({ success: false, message: "Server error", error });
+        return res.status(500).json({ success: false, message: "Server error", error });
     }
 };
 
 // ✅ Create new category 
-export const createCategory = async (req: Request, res: Response): Promise<void> => {
+export const createCategory = async (req: Request, res: Response) => {
     try {
         const { name, active, order } = req.body;
 
         const exists = await Category.findOne({ name });
         if (exists) {
-            res.status(400).json({ success: false, message: "Category with this name already exists" });
-            return;
+            return res.status(400).json({ success: false, message: "Category with this name already exists" });
         }
 
         const category = new Category({ name, active, order });
         await category.save();
 
-        res.status(201).json({
+        return res.status(201).json({
             success: true,
             message: "Category created successfully",
             data: category,
         });
     } catch (error) {
-        res.status(500).json({ success: false, message: "Server error", error });
+        return res.status(500).json({ success: false, message: "Server error", error });
     }
 };
 
 // ✅ Update category 
-export const updateCategory = async (req: Request, res: Response): Promise<void> => {
+export const updateCategory = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
 
         if (!isValidObjectId(id)) {
-            res.status(400).json({
+            return res.status(400).json({
                 success: false,
                 message: "Invalid category ID format",
             });
-            return;
         }
 
         // السماح فقط بتحديث هذه الحقول
@@ -99,58 +95,54 @@ export const updateCategory = async (req: Request, res: Response): Promise<void>
         });
 
         if (!category) {
-            res.status(404).json({ success: false, message: "Category not found" });
-            return;
+            return res.status(404).json({ success: false, message: "Category not found" });
         }
 
-        res.status(200).json({
+        return res.status(200).json({
             success: true,
             message: "Category updated successfully",
             data: category,
         });
     } catch (error) {
-        res.status(500).json({ success: false, message: "Server error", error });
+        return res.status(500).json({ success: false, message: "Server error", error });
     }
 };
 
 // ✅ Delete category 
-export const deleteCategory = async (req: Request, res: Response): Promise<void> => {
+export const deleteCategory = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
         const { name } = req.body;
 
         if (!isValidObjectId(id)) {
-            res.status(400).json({
+            return res.status(400).json({
                 success: false,
                 message: "Invalid category ID format",
             });
-            return;
         }
 
         const category = await Category.findById(id);
         if (!category) {
-            res.status(404).json({ success: false, message: "Category not found" });
-            return;
+            return res.status(404).json({ success: false, message: "Category not found" });
         }
 
         // تحقق من الاسم
         if (!name?.trim() || name.trim() !== category.name) {
-            res.status(400).json({
+            return res.status(400).json({
                 success: false,
                 message: "Category name does not match. Please provide the exact name to confirm deletion.",
             });
-            return;
         }
 
         await category.deleteOne(); // أو findByIdAndDelete(id);
 
-        res.status(200).json({
+        return res.status(200).json({
             success: true,
             message: "Category deleted successfully",
             data: category,
         });
     } catch (error) {
-        res.status(500).json({ success: false, message: "Server error", error });
+        return res.status(500).json({ success: false, message: "Server error", error });
     }
 };
 
