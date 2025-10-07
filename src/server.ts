@@ -7,9 +7,9 @@ if (process.env.NODE_ENV === 'test') {
 
 import express from 'express';
 import type { Request, Response, NextFunction } from 'express';
+import { apiRateLimiter } from "./middleware/rateLimiter.js";
 import cors from 'cors';
 import helmet from 'helmet';
-import type { Server } from 'node:http';
 import { connectDB } from './database/connection.js';
 
 // Routes
@@ -24,16 +24,17 @@ const port = process.env.PORT || 3000;
 const app = express();
 
 // Security & Middleware
+app.use(express.json());
 app.use(helmet({}));
 app.use(cors());
-app.use(express.json());
+app.use("/", apiRateLimiter);
 
 // Routes
 app.get('/', (req: Request, res: Response) => {
     res.send('Hello Express + TypeScript');
 });
 
-app.get('/error-test', () => {
+app.get('/error-test', (req: Request, res: Response) => {
     throw new Error('Forced error');
 });
 
@@ -62,9 +63,13 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
 export { app };
 
 if (process.env.NODE_ENV != "test") {
-    connectDB().then(() => {
-        app.listen(port, () => {
-            console.log(`🟢 Server running on http://localhost:${port}`);
+    connectDB()
+        .then(() => {
+            app.listen(port, () => {
+                console.log(`🟢 Server running on http://localhost:${port}`);
+            });
+        }).catch(err => {
+            console.error("DB connection failed:", err);
+            process.exit(1);
         });
-    });
 }
