@@ -8,12 +8,24 @@ if (process.env.NODE_ENV === 'test') {
 }
 
 mongoose.set('strictQuery', true);
+mongoose.set('sanitizeFilter', true);
 
-const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017/couponati';
+let uri = process.env.MONGODB_URI;
+if (!uri) {
+    if (process.env.NODE_ENV === 'production') {
+        console.error('❌ MONGODB_URI is required in production');
+        process.exit(1);
+    }
+    uri = 'mongodb://localhost:27017/couponati';
+}
 
 export const connectDB = async (): Promise<void> => {
     try {
-        await mongoose.connect(uri);
+        await mongoose.connect(uri, {
+            retryWrites: true,
+            w: 'majority',
+            serverSelectionTimeoutMS: 10000
+        });
         console.log('🟢 Connected to the database successfully');
     } catch (error) {
         console.error('🔴 DB connection failed:', error);
