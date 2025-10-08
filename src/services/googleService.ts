@@ -1,6 +1,4 @@
 import { OAuth2Client, type TokenPayload } from 'google-auth-library';
-import dotenv from 'dotenv';
-dotenv.config();
 
 const client = new OAuth2Client();
 

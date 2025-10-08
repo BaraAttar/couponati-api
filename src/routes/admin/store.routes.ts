@@ -1,9 +1,9 @@
 import express from "express";
-import { activateStore, createStore, deactivateStore, deleteStore, getStoreById, getStores, updateStore } from "../controllers/store.controller.js";
+import { activateStore, createStore, deactivateStore, deleteStore, updateStore } from "../../controllers/admin/store.controller.js";
+import { authMiddleware, adminMiddleware } from '../../middleware/auth.js';
 const router = express.Router();
 
-router.get("/", getStores)
-router.get("/:id", getStoreById)
+router.use(authMiddleware, adminMiddleware);
 
 router.post("/", createStore)
 

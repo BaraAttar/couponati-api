@@ -1,9 +1,4 @@
-import dotenv from 'dotenv';
-if (process.env.NODE_ENV === 'test') {
-    dotenv.config({ quiet: true });
-} else {
-    dotenv.config();
-}
+import './config/env.js';
 
 import express from 'express';
 import type { Request, Response, NextFunction } from 'express';
@@ -12,12 +7,24 @@ import cors from 'cors';
 import helmet from 'helmet';
 import { connectDB } from './database/connection.js';
 
-// Routes
+// 🔵 Auth Routes
 import authRoutes from "./routes/auth.routes.js"
-import bannerRoutes from "./routes/banner.routes.js"
-import categoryRoutes from "./routes/category.routes.js"
-import storeRoutes from "./routes/store.routes.js"
-import couponRoutes from "./routes/coupon.routes.js"
+
+// 🔴 Admin Routes (Dashboard)
+import adminBannerRoutes from "./routes/admin/banner.routes.js";
+import adminCategoryRoutes from "./routes/admin/category.routes.js";
+import adminStoreRoutes from "./routes/admin/store.routes.js";
+import adminCouponRoutes from "./routes/admin/coupon.routes.js";
+
+// 🌐 Public Routes (General Access)
+import bannerRoutes from "./routes/public/banner.routes.js"
+import categoryRoutes from "./routes/public/category.routes.js"
+import storeRoutes from "./routes/public/store.routes.js"
+import couponRoutes from "./routes/public/coupon.routes.js"
+
+// 🟢 User Routes (Protected)
+import userStoreRoutes from "./routes/user/store.routes.js"
+
 
 // VARIABLES
 const port = process.env.PORT || 3000;
@@ -38,11 +45,23 @@ app.get('/error-test', (req: Request, res: Response) => {
     throw new Error('Forced error');
 });
 
+// 🔵 Auth Routes
 app.use("/auth", authRoutes);
+
+// 🔴 Admin Routes (Dashboard)
+app.use("/admin/banner", adminBannerRoutes);
+app.use("/admin/category", adminCategoryRoutes);
+app.use("/admin/store", adminStoreRoutes);
+app.use("/admin/coupon", adminCouponRoutes);
+
+// 🌐 Public Routes (General Access)
 app.use("/banner", bannerRoutes);
 app.use("/category", categoryRoutes);
 app.use("/store", storeRoutes);
 app.use("/coupon", couponRoutes);
+
+// 🟢 User Routes (Protected)
+app.use("/user/store", userStoreRoutes);
 
 // Error handling middleware 
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {

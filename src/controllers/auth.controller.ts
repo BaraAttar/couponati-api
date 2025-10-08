@@ -1,6 +1,3 @@
-import dotenv from 'dotenv';
-dotenv.config();
-
 import type { Request, Response } from "express";
 import { verifyGoogleToken } from '../services/googleService.js';
 import jwt from "jsonwebtoken";

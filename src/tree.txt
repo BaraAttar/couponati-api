@@ -1,0 +1,46 @@
+.
+├── controllers
+│   ├── admin
+│   │   ├── banner.controller.ts
+│   │   ├── category.controller.ts
+│   │   ├── coupon.controller.ts
+│   │   └── store.controller.ts
+│   ├── auth.controller.ts
+│   ├── public
+│   │   ├── banner.controller.ts
+│   │   ├── category.controller.ts
+│   │   ├── coupon.controller.ts
+│   │   └── store.controller.ts
+│   └── user
+│       └── store.controller.ts
+├── database
+│   └── connection.ts
+├── middleware
+│   ├── auth.ts
+│   └── rateLimiter.ts
+├── models
+│   ├── Banner.model.ts
+│   ├── Category.model.ts
+│   ├── Coupon.model.ts
+│   ├── Store.model.ts
+│   └── User.model.ts
+├── routes
+│   ├── admin
+│   │   ├── banner.routes.ts
+│   │   ├── category.routes.ts
+│   │   ├── coupon.routes.ts
+│   │   └── store.routes.ts
+│   ├── auth.routes.ts
+│   ├── public
+│   │   ├── banner.routes.ts
+│   │   ├── category.routes.ts
+│   │   ├── coupon.routes.ts
+│   │   └── store.routes.ts
+│   └── user
+│       └── store.routes.ts
+├── server.ts
+├── services
+│   └── googleService.ts
+└── tree.txt
+
+13 directories, 31 files
