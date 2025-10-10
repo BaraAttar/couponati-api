@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
-import { verifyGoogleToken } from '../services/googleService.js';
+import { verifyGoogleToken } from '../../services/google.service.js';
 import jwt from "jsonwebtoken";
-import { User } from '../models/User.model.js';
+import { User } from '../../models/User.model.js';
 
 export const googleLogin = async (req: Request, res: Response) => {
     const { idToken } = req.body
@@ -51,15 +51,15 @@ export const googleLogin = async (req: Request, res: Response) => {
             success: true,
             message: "google logged in successfuly",
             data: {
+                token,
                 user: {
                     googleId: user.googleId,
                     email: user.email,
                     firstName: user.firstName,
                     lastName: user.lastName,
                     picture: user.picture,
-                    favourites: user.favourites
                 },
-                token
+                favourites: user.favourites
             }
         })
     } catch (err) {

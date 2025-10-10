@@ -8,13 +8,14 @@ import helmet from 'helmet';
 import { connectDB } from './database/connection.js';
 
 // 🔵 Auth Routes
-import authRoutes from "./routes/auth.routes.js"
+import adminAuthRoutes from "./routes/admin/admin.auth.routes.js"
+import authRoutes from "./routes/user/user.auth.routes.js"
 
 // 🔴 Admin Routes (Dashboard)
-import adminBannerRoutes from "./routes/admin/banner.routes.js";
-import adminCategoryRoutes from "./routes/admin/category.routes.js";
-import adminStoreRoutes from "./routes/admin/store.routes.js";
-import adminCouponRoutes from "./routes/admin/coupon.routes.js";
+import adminBannerRoutes from "./routes/admin/admin.banner.routes.js";
+import adminCategoryRoutes from "./routes/admin/admin.category.routes.js";
+import adminStoreRoutes from "./routes/admin/admin.store.routes.js";
+import adminCouponRoutes from "./routes/admin/admin.coupon.routes.js";
 
 // 🌐 Public Routes (General Access)
 import bannerRoutes from "./routes/public/banner.routes.js"
@@ -23,7 +24,7 @@ import storeRoutes from "./routes/public/store.routes.js"
 import couponRoutes from "./routes/public/coupon.routes.js"
 
 // 🟢 User Routes (Protected)
-import userStoreRoutes from "./routes/user/store.routes.js"
+import userStoreRoutes from "./routes/user/user.store.routes.js"
 
 
 // VARIABLES
@@ -46,6 +47,7 @@ app.get('/error-test', (req: Request, res: Response) => {
 });
 
 // 🔵 Auth Routes
+app.use("/admin/auth", adminAuthRoutes);
 app.use("/auth", authRoutes);
 
 // 🔴 Admin Routes (Dashboard)

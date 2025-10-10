@@ -11,7 +11,7 @@ export interface User extends Document {
     picture?: String;
     gender?: 'male' | 'female' | 'other';
     favourites: Types.ObjectId[];
-    role: 'user' | 'admin';
+    role: 'user';
 }
 
 const userSchema = new Schema<User>(
@@ -67,10 +67,11 @@ const userSchema = new Schema<User>(
         role: {
             type: String,
             enum: {
-                values: ['user', 'admin'],
-                message: 'Role must be user or admin'
+                values: ['user'],
+                message: 'Role just can be user'
             },
             default: 'user',
+            immutable: true,
         },
     },
     { timestamps: true }
