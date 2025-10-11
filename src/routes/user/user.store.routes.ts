@@ -4,7 +4,7 @@ import { getUserFavourites, addToFavourites, removeFromFavourites } from "../../
 const router = express.Router();
 router.use(userAuthMiddleware);
 
-router.get("/favourites/my", getUserFavourites);
+router.get("/favourites", getUserFavourites);
 router.post("/favourites", addToFavourites);
 router.delete("/favourites/:storeId", removeFromFavourites);
 

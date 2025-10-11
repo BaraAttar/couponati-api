@@ -44,9 +44,6 @@ export const googleLogin = async (req: Request, res: Response) => {
             { expiresIn: "1000d" }
         );
 
-
-        console.log(user)
-
         return res.status(200).json({
             success: true,
             message: "google logged in successfuly",
@@ -81,7 +78,8 @@ export const verifyToken = async (req: Request, res: Response) => {
         })
     }
     try {
-        const dbUser = await User.findOne({ googleId: tokenUser.googleId });
+        const dbUser = await User.findOne({ googleId: tokenUser.googleId }).populate('favourites');
+
         if (!dbUser) {
             return res.status(404).json({
                 success: false,
@@ -93,7 +91,14 @@ export const verifyToken = async (req: Request, res: Response) => {
             success: true,
             message: "User retrieved successfully",
             data: {
-                user: dbUser
+                user: {
+                    googleId: dbUser.googleId,
+                    email: dbUser.email,
+                    firstName: dbUser.firstName,
+                    lastName: dbUser.lastName,
+                    picture: dbUser.picture
+                },
+                favourites: dbUser.favourites
             }
         });
     } catch (err) {
