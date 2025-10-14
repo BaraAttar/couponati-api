@@ -26,13 +26,8 @@ export const getStores = async (req: Request, res: Response) => {
             filter.category = category;
         }
 
-        if (name) {
-            // filter.$or = [
-            //     { name_ar: { $regex: name as string, $options: 'i' } },
-            //     { name_en: { $regex: name as string, $options: 'i' } },
-            // ];
-            filter.name = { $regex: name as string, $options: 'i' };
-
+        if (name && typeof name === 'string' && name.trim() !== '') {
+            filter.name = new RegExp(name, 'i');
         }
 
         const totalCount = await Store.countDocuments(filter);
