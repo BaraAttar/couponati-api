@@ -30,6 +30,7 @@ import userStoreRoutes from "./routes/user/user.store.routes.js"
 // VARIABLES
 const port = process.env.PORT || 3000;
 const app = express();
+app.set('trust proxy', 1);
 
 // Security & Middleware
 app.use(express.json());
