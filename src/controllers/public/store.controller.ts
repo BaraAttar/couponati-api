@@ -12,8 +12,8 @@ export const getStores = async (req: Request, res: Response) => {
         const { active, category, name } = req.query;
         const filter: any = {};
 
-        if (active !== undefined) {
-            filter.active = active === 'true';
+        if (active !== undefined || active == null) {
+            filter.active = true
         }
 
         if (category) {

@@ -35,7 +35,10 @@ export const googleLogin = async (req: Request, res: Response) => {
                 picture
             },
             { new: true, upsert: true }
-        ).populate('favourites');
+        ).populate({
+            path: 'favourites',
+            populate: { path: 'coupons' }
+        });
 
 
         const token = jwt.sign(
@@ -78,7 +81,11 @@ export const verifyToken = async (req: Request, res: Response) => {
         })
     }
     try {
-        const dbUser = await User.findOne({ googleId: tokenUser.googleId }).populate('favourites');
+        const dbUser = await User.findOne({ googleId: tokenUser.googleId })
+            .populate({
+                path: 'favourites',
+                populate: { path: 'coupons' }
+            });
 
         if (!dbUser) {
             return res.status(404).json({

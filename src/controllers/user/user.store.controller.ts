@@ -15,15 +15,18 @@ export const getUserFavourites = async (req: Request, res: Response) => {
         }
 
         const user = await User.findOne({ googleId: userId })
+            .select('favourites')
             .populate({
                 path: 'favourites',
+                match: { active: true },
+                select: 'name logo description coupons',
                 populate: [
                     { path: 'category', select: 'name' },
-                    { path: 'coupons' }
-                ],
-                match: { active: true }
+                    { path: 'coupons', select: 'code discount description' }
+                ]
             })
-            .lean();
+            .lean()
+            .exec();
 
         if (!user) {
             return res.status(404).json({
@@ -67,11 +70,11 @@ export const addToFavourites = async (req: Request, res: Response) => {
         }
 
         // التحقق من وجود المتجر وأنه نشط
-        const store = await Store.findOne({ _id: storeId, active: true });
+        const store = await Store.findOne({ _id: storeId });
         if (!store) {
             return res.status(404).json({
                 success: false,
-                message: "Store not found or inactive",
+                message: "Store not found",
             });
         }
 
