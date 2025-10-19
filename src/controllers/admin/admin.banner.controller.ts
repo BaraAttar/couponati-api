@@ -26,7 +26,6 @@ export const createBanner = async (req: Request<{}, {}, BannerType>, res: Respon
         const { name, image } = req.body;
 
         if (!req.body || !req.body.name || !req.body.image) {
-
             return res.status(400).json({
                 success: false,
                 message: "name and image url is required",
@@ -40,7 +39,12 @@ export const createBanner = async (req: Request<{}, {}, BannerType>, res: Respon
             });
         }
 
-        const existingBanner = await Banner.findOne({ name: name.trim() });
+        const existingBanner = await Banner.findOne({
+            $or: [
+                { name: name.trim() },
+                { image: image.trim() }
+            ]
+        }).lean();
         if (existingBanner) {
             return res.status(400).json({
                 success: false,
@@ -62,7 +66,9 @@ export const createBanner = async (req: Request<{}, {}, BannerType>, res: Respon
         return res.status(500).json({
             success: false,
             message: "Server error",
-            error: process.env.NODE_ENV === "development" ? error : undefined,
+            ...(process.env.NODE_ENV === "development" && {
+                error: error instanceof Error ? error.message : 'Unknown error'
+            })
         });
     }
 }
@@ -81,11 +87,23 @@ export const updateBanner = async (req: Request<{ id: string }, {}, UpdateBanner
         if (updateData.link) updateData.link = updateData.link.trim();
 
         // التحقق من صحة الـ URL إذا تم تحديث الصورة
-        if (updateData.image && !isValidUrl(updateData.image)) {
-            return res.status(400).json({
-                success: false,
-                message: "Please provide a valid image URL",
-            });
+        if (updateData.image) {
+            if (!isValidUrl(updateData.image)) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Please provide a valid image URL",
+                });
+            }
+            const existingBanner = await Banner.findOne({
+                image: updateData.image,
+                _id: { $ne: id }
+            }).lean();
+            if (existingBanner) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Banner with this image already exists",
+                });
+            }
         }
 
         // التحقق من عدم تكرار الاسم (إذا تم تغييره)
@@ -93,7 +111,7 @@ export const updateBanner = async (req: Request<{ id: string }, {}, UpdateBanner
             const existingBanner = await Banner.findOne({
                 name: updateData.name,
                 _id: { $ne: id }
-            });
+            }).lean();
             if (existingBanner) {
                 return res.status(400).json({
                     success: false,
@@ -102,7 +120,7 @@ export const updateBanner = async (req: Request<{ id: string }, {}, UpdateBanner
             }
         }
 
-        const updatedBanner = await Banner.findByIdAndUpdate(id, updateData, { new: true });
+        const updatedBanner = await Banner.findByIdAndUpdate(id, updateData, { new: true }).lean();
 
         if (!updatedBanner) {
             return res.status(404).json({ success: false, message: "Banner not found" });
@@ -118,7 +136,9 @@ export const updateBanner = async (req: Request<{ id: string }, {}, UpdateBanner
         return res.status(500).json({
             success: false,
             message: "Server error",
-            error: process.env.NODE_ENV === "development" ? error : undefined,
+            ...(process.env.NODE_ENV === "development" && {
+                error: error instanceof Error ? error.message : 'Unknown error'
+            })
         });
     }
 };
@@ -130,7 +150,7 @@ export const deleteBanner = async (req: Request<{ id: string }>, res: Response) 
             return res.status(400).json({ success: false, message: "Invalid ID format" });
         }
 
-        const banner = await Banner.findByIdAndDelete(id)
+        const banner = await Banner.findByIdAndDelete(id);
 
         if (!banner) {
             return res.status(404).json({
@@ -149,7 +169,9 @@ export const deleteBanner = async (req: Request<{ id: string }>, res: Response) 
         return res.status(500).json({
             success: false,
             message: "Server error",
-            error: process.env.NODE_ENV === "development" ? error : undefined,
+            ...(process.env.NODE_ENV === "development" && {
+                error: error instanceof Error ? error.message : 'Unknown error'
+            })
         });
     }
 }

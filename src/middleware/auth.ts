@@ -5,7 +5,7 @@ import { Admin } from "../models/Admin.model.js";
 const JWT_SECRET = process.env.JWT_SECRET;
 
 if (!JWT_SECRET) {
-    throw new Error("FATAL ERROR: JWT_SECRET is not defined in environment variables");
+    throw new Error("❌ FATAL ERROR: JWT_SECRET is not defined in environment variables");
 }
 
 declare module "express-serve-static-core" {
@@ -31,29 +31,30 @@ export interface AdminPayload {
     role: "user" | "admin";
 }
 
-export function userAuthMiddleware(req: Request, res: Response, next: NextFunction) {
+function extractToken(req: Request): string | null {
     const authHeader = req.headers["authorization"];
-    if (!authHeader) {
-        console.log("❌ No authorization header");
-        return res.status(401).json({ success: false, message: "Authorization header required" });
-    }
+    if (!authHeader) return null;
 
     const token = authHeader.startsWith("Bearer ")
         ? authHeader.substring(7).trim()
         : authHeader.trim();
 
-    if (!token || token === "undefined" || token === "null") {
-        console.log("❌ Invalid token value:", token);
-        return res.status(401).json({ success: false, message: "Token required" });
-    }
+    if (!token || token === "undefined" || token === "null") return null;
 
-    if (!token) return res.status(401).json({ success: false, message: "Token required" });
+    return token;
+}
+
+export function userAuthMiddleware(req: Request, res: Response, next: NextFunction) {
+    const token = extractToken(req);
+    if (!token)
+        return res.status(401).json({ success: false, message: "Unauthorized access" });
 
     try {
-        const payload = jwt.verify(token, process.env.JWT_SECRET!) as UserPayload
+        const payload = jwt.verify(token, JWT_SECRET!) as UserPayload;
         req.user = payload;
         next();
     } catch (err: any) {
+        console.log(`❌ userAuthMiddleware: ${err.message}`);
         if (err.name === "TokenExpiredError") return res.status(401).json({ success: false, message: "Token expired" });
         if (err.name === "JsonWebTokenError") return res.status(403).json({ success: false, message: "Invalid token" });
         return res.status(500).json({ success: false, message: "Token verification failed" });
@@ -61,25 +62,14 @@ export function userAuthMiddleware(req: Request, res: Response, next: NextFuncti
 }
 
 export async function adminAuthMiddleware(req: Request, res: Response, next: NextFunction) {
-    const authHeader = req.headers["authorization"];
-    if (!authHeader) {
-        console.log("❌ No authorization header");
-        return res.status(401).json({ success: false, message: "Authorization header required" });
-    }
-
-    const token = authHeader.startsWith("Bearer ")
-        ? authHeader.substring(7).trim()
-        : authHeader.trim();
-
-    if (!token || token === "undefined" || token === "null") {
-        console.log("❌ Invalid token value:", token);
-        return res.status(401).json({ success: false, message: "Token required" });
-    }
+    const token = extractToken(req);
+    if (!token)
+        return res.status(401).json({ success: false, message: "Unauthorized access" });
 
     try {
         const payload = jwt.verify(token, JWT_SECRET!) as AdminPayload
 
-        const account = await Admin.findById(payload._id);
+        const account = await Admin.findById(payload._id).select("role").lean();
         if (!account) {
             return res.status(401).json({ success: false, message: "Invalid token" });
         }
@@ -91,7 +81,7 @@ export async function adminAuthMiddleware(req: Request, res: Response, next: Nex
         req.admin = payload;
         next();
     } catch (err: any) {
-        console.log(err);
+        console.log(`❌ adminAuthMiddleware: ${err.message}`);
         if (err.name === "TokenExpiredError") return res.status(401).json({ success: false, message: "Token expired" });
         if (err.name === "JsonWebTokenError") return res.status(403).json({ success: false, message: "Invalid token" });
         return res.status(500).json({ success: false, message: "Token verification failed" });

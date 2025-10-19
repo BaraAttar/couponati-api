@@ -6,7 +6,7 @@ import { isValidObjectId } from "mongoose";
 // ✅ Get all categories 
 export const getCategories = async (req: Request, res: Response) => {
     try {
-        const categories = await Category.find().sort({ order: 1 });
+        const categories = await Category.find().sort({ order: 1 }).lean();
         return res.status(200).json({
             success: true,
             message: "Categories retrieved successfully",
@@ -30,7 +30,7 @@ export const getCategoryById = async (req: Request, res: Response) => {
             });
         }
 
-        const category = await Category.findById(id);
+        const category = await Category.findById(id).lean();
         if (!category) {
             return res.status(404).json({ success: false, message: "Category not found" });
         }

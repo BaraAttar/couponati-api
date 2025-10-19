@@ -6,6 +6,7 @@ import { apiRateLimiter } from "./middleware/rateLimiter.js";
 import cors from 'cors';
 import helmet from 'helmet';
 import { connectDB } from './database/connection.js';
+import { languageMiddleware } from './middleware/languageMiddleware.js';
 
 // 🔵 Auth Routes
 import adminAuthRoutes from "./routes/admin/admin.auth.routes.js"
@@ -26,16 +27,17 @@ import couponRoutes from "./routes/public/coupon.routes.js"
 // 🟢 User Routes (Protected)
 import userStoreRoutes from "./routes/user/user.store.routes.js"
 
-
 // VARIABLES
 const port = process.env.PORT || 3000;
 const app = express();
 app.set('trust proxy', 1);
+app.disable('x-powered-by');
 
 // Security & Middleware
 app.use(express.json());
 app.use(helmet({}));
 app.use(cors());
+app.use(languageMiddleware)
 app.use("/", apiRateLimiter);
 
 // Routes

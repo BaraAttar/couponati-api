@@ -12,7 +12,7 @@ export const getStores = async (req: Request, res: Response) => {
         const { active, category, name } = req.query;
         const filter: any = {};
 
-        if (active !== undefined || active == null) {
+        if (active === undefined || active === null) {
             filter.active = true
         }
 
@@ -27,7 +27,10 @@ export const getStores = async (req: Request, res: Response) => {
         }
 
         if (name && typeof name === 'string' && name.trim() !== '') {
-            filter.name = new RegExp(name, 'i');
+            filter.$or = [
+                { 'name.ar': new RegExp(name.trim(), 'i') },
+                { 'name.en': new RegExp(name.trim(), 'i') }
+            ];
         }
 
         const totalCount = await Store.countDocuments(filter);
@@ -39,6 +42,7 @@ export const getStores = async (req: Request, res: Response) => {
             .skip((page - 1) * limit)
             .limit(limit)
             .sort({ order: 1, createdAt: -1 })
+            .lean();
 
         res.status(200).json({
             success: true,
@@ -71,6 +75,7 @@ export const getStoreById = async (req: Request, res: Response) => {
 
         const store = await Store.findById(id)
             .populate('category', 'name')
+            .lean();
 
         if (!store) {
             return res.status(404).json({

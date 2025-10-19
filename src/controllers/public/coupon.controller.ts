@@ -22,7 +22,7 @@ export const getCoupons = async (req: Request, res: Response) => {
 
         if (active !== undefined) filter.active = active === "true";
 
-        const coupons = await Coupon.find(filter).sort({ usedCount: -1 });
+        const coupons = await Coupon.find(filter).sort({ usedCount: -1 }).lean();
 
         return res.status(200).json({
             success: true,

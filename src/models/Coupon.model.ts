@@ -5,7 +5,10 @@ export interface Coupon extends Document {
     code: string;
     discount: number;
     usedCount?: number;
-    description?: string;
+    description?: {
+        ar: string
+        en: string
+    };
     expiryDate?: Date;
     active: boolean;
     store: Types.ObjectId;
@@ -18,12 +21,26 @@ const couponSchema = new Schema<Coupon>(
         code: { type: String, required: true, trim: true },
         discount: { type: Number, required: true, min: 0, max: 100 },
         usedCount: { type: Number, default: 0 },
-        description: { type: String, trim: true, default: '' },
+        // description: { type: String, trim: true, default: '' },
+        description: {
+            ar: { type: String, trim: true, default: '' },
+            en: { type: String, trim: true, default: '' }
+        },
         expiryDate: { type: Date },
         active: { type: Boolean, default: true },
         store: { type: Schema.Types.ObjectId, ref: 'Store', required: true },
     },
     { timestamps: true }
 );
+
+couponSchema.pre('validate', function (next) {
+    // الوصف: كلاهما فارغ أو كلاهما ممتلئ
+    const descAr = this.description?.ar?.trim() || '';
+    const descEn = this.description?.en?.trim() || '';
+    if ((descAr && !descEn) || (!descAr && descEn)) {
+        this.invalidate('description', 'Both Arabic and English descriptions must be filled or both empty.');
+    }
+    next();
+});
 
 export const Coupon = model<Coupon>('Coupon', couponSchema);

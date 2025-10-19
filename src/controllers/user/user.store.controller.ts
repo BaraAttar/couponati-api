@@ -19,14 +19,13 @@ export const getUserFavourites = async (req: Request, res: Response) => {
             .populate({
                 path: 'favourites',
                 match: { active: true },
-                select: 'name logo description coupons',
+                select: 'name icon banner description coupons',
                 populate: [
                     { path: 'category', select: 'name' },
                     { path: 'coupons', select: 'code discount description' }
                 ]
             })
             .lean()
-            .exec();
 
         if (!user) {
             return res.status(404).json({
@@ -70,7 +69,7 @@ export const addToFavourites = async (req: Request, res: Response) => {
         }
 
         // التحقق من وجود المتجر وأنه نشط
-        const store = await Store.findOne({ _id: storeId });
+        const store = await Store.findOne({ _id: storeId, active: true }).lean();
         if (!store) {
             return res.status(404).json({
                 success: false,
@@ -96,15 +95,13 @@ export const addToFavourites = async (req: Request, res: Response) => {
         user.favourites.push(storeId);
         await user.save();
 
-        const updatedUser = await User.findOne({ googleId: userId })
-            .populate('favourites')
-            .lean();
+        const updatedUser = await user.populate("favourites");
 
         return res.status(200).json({
             success: true,
             message: "Store added to favourites successfully",
             data: {
-                favourites: updatedUser?.favourites || []
+                favourites: updatedUser?.favourites ?? []
             }
         });
     } catch (error) {
@@ -154,15 +151,15 @@ export const removeFromFavourites = async (req: Request, res: Response) => {
         user.favourites.splice(index, 1);
         await user.save();
 
-        const updatedUser = await User.findOne({ googleId: userId })
-            .populate('favourites')
-            .lean();
+
+        const updatedUser = await user.populate("favourites");
+
 
         return res.status(200).json({
             success: true,
             message: "Store removed from favourites successfully",
             data: {
-                favourites: updatedUser?.favourites || []
+                favourites: updatedUser?.favourites ?? []
             }
         });
     } catch (error) {

@@ -4,7 +4,7 @@ import { isValidObjectId } from "mongoose";
 
 export const getBanners = async (req: Request, res: Response) => {
     try {
-        const banners = await Banner.find().sort({ order: 1, createdAt: -1 });
+        const banners = await Banner.find().sort({ order: 1, createdAt: -1 }).lean();
 
         return res.status(200).json({
             success: true,
@@ -33,7 +33,7 @@ export const getBannerById = async (req: Request<{ id: string }>, res: Response)
             });
         }
 
-        const banner = await Banner.findById(id);
+        const banner = await Banner.findById(id).lean();
 
         if (!banner) {
             return res.status(404).json({

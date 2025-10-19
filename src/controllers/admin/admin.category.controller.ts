@@ -1,33 +1,79 @@
 import type { Request, Response } from "express";
 import { Category } from "../../models/Category.model.js";
+import { Store } from "../../models/Store.model.js";
 import { isValidObjectId } from "mongoose";
-
 
 // ✅ Create new category 
 export const createCategory = async (req: Request, res: Response) => {
     try {
         const { name, active, order } = req.body;
 
-        const exists = await Category.findOne({ name });
-        if (exists) {
-            return res.status(400).json({ success: false, message: "Category with this name already exists" });
+        // ✅ تحقق من الاسم
+        if (!name || typeof name !== 'object' || !name.ar?.trim() || !name.en?.trim()) {
+            return res.status(400).json({
+                success: false,
+                message: 'Category name in Arabic and English are both required.',
+            });
         }
 
-        const category = new Category({ name, active, order });
-        await category.save();
+        // ✅ تحقق من التكرار
+        const exists = await Category.findOne({
+            $or: [
+                { 'name.ar': name.ar.trim() },
+                { 'name.en': name.en.trim() },
+            ],
+        }).lean();
+
+        if (exists) {
+            return res.status(409).json({ 
+                success: false, 
+                message: "Category with this name already exists" 
+            });
+        }
+
+        // إنشاء الفئة
+        const category = new Category({
+            name: {
+                ar: name.ar.trim(),
+                en: name.en.trim(),
+            },
+            active: active ?? true,
+            order: order || 0
+        });
+
+        const savedCategory = await category.save();
+
+        // ✅ إرجاع البيانات مع .lean()
+        const categoryData = await Category.findById(savedCategory._id).lean();
 
         return res.status(201).json({
             success: true,
             message: "Category created successfully",
-            data: category,
+            data: categoryData,
         });
     } catch (error) {
-        return res.status(500).json({ success: false, message: "Server error", error });
+        console.error("createCategory error:", error);
+        return res.status(500).json({ 
+            success: false, 
+            message: "Server error",
+            ...(process.env.NODE_ENV === "development" && {
+                error: error instanceof Error ? error.message : 'Unknown error'
+            })
+        });
     }
 };
 
 // ✅ Update category 
-export const updateCategory = async (req: Request, res: Response) => {
+interface UpdateCategoryBody {
+    name?: {
+        ar?: string;
+        en?: string;
+    };
+    active?: boolean;
+    order?: number;
+}
+
+export const updateCategory = async (req: Request<{ id: string }, {}, UpdateCategoryBody>, res: Response) => {
     try {
         const { id } = req.params;
 
@@ -38,23 +84,61 @@ export const updateCategory = async (req: Request, res: Response) => {
             });
         }
 
-        // السماح فقط بتحديث هذه الحقول
-        const allowedUpdates = ["name", "active", "order"];
-        const updateData: any = {};
-        for (const key of allowedUpdates) {
-            if (req.body[key] !== undefined) {
-                updateData[key] = req.body[key];
-            }
+        // ✅ تحقق من وجود الفئة
+        const existingCategory = await Category.findById(id).lean();
+        if (!existingCategory) {
+            return res.status(404).json({ 
+                success: false, 
+                message: "Category not found" 
+            });
         }
 
+        const updateData: Partial<UpdateCategoryBody> = {};
+
+        // ✅ تحديث الاسم مع التحقق من التكرار
+        if (req.body.name !== undefined) {
+            const { ar, en } = req.body.name;
+            
+            if (!ar?.trim() || !en?.trim()) {
+                return res.status(400).json({ 
+                    success: false, 
+                    message: "Both Arabic and English names are required." 
+                });
+            }
+
+            // ✅ تحقق من التكرار (محسّن)
+            const duplicate = await Category.findOne({
+                $or: [
+                    { 'name.ar': ar.trim() },
+                    { 'name.en': en.trim() },
+                ],
+                _id: { $ne: id }
+            }).lean();
+
+            if (duplicate) {
+                return res.status(409).json({ 
+                    success: false, 
+                    message: "Category with this name already exists" 
+                });
+            }
+
+            updateData.name = { ar: ar.trim(), en: en.trim() };
+        }
+
+        // ✅ باقي الحقول
+        if (req.body.active !== undefined) {
+            updateData.active = req.body.active;
+        }
+
+        if (req.body.order !== undefined) {
+            updateData.order = req.body.order;
+        }
+
+        // ✅ التحديث مع .lean() (محسّن)
         const category = await Category.findByIdAndUpdate(id, updateData, {
             new: true,
             runValidators: true,
-        });
-
-        if (!category) {
-            return res.status(404).json({ success: false, message: "Category not found" });
-        }
+        }).lean();
 
         return res.status(200).json({
             success: true,
@@ -62,15 +146,26 @@ export const updateCategory = async (req: Request, res: Response) => {
             data: category,
         });
     } catch (error) {
-        return res.status(500).json({ success: false, message: "Server error", error });
+        console.error("updateCategory error:", error);
+        return res.status(500).json({ 
+            success: false, 
+            message: "Server error",
+            ...(process.env.NODE_ENV === "development" && {
+                error: error instanceof Error ? error.message : 'Unknown error'
+            })
+        });
     }
 };
 
 // ✅ Delete category 
-export const deleteCategory = async (req: Request, res: Response) => {
+interface DeleteCategoryBody {
+    confirm: string
+}
+
+export const deleteCategory = async (req: Request<{ id: string }, {}, DeleteCategoryBody>, res: Response) => {
     try {
         const { id } = req.params;
-        const { name } = req.body;
+        const { confirm } = req.body;
 
         if (!isValidObjectId(id)) {
             return res.status(400).json({
@@ -79,28 +174,105 @@ export const deleteCategory = async (req: Request, res: Response) => {
             });
         }
 
-        const category = await Category.findById(id);
-        if (!category) {
-            return res.status(404).json({ success: false, message: "Category not found" });
-        }
-
-        // تحقق من الاسم
-        if (!name?.trim() || name.trim() !== category.name) {
+        // ✅ تحقق من كلمة التأكيد
+        const normalizedConfirm = confirm?.trim().toLowerCase();
+        const validConfirmations = ["delete", "حذف", "confirm"];
+        
+        if (!validConfirmations.includes(normalizedConfirm)) {
             return res.status(400).json({
                 success: false,
-                message: "Category name does not match. Please provide the exact name to confirm deletion.",
+                message: "Please type 'delete' or 'حذف' to confirm category deletion.",
             });
         }
 
-        await category.deleteOne(); // أو findByIdAndDelete(id);
+        // ✅ تحقق من المتاجر المرتبطة (محسّن)
+        const relatedStoresCount = await Store.countDocuments({ 
+            category: id 
+        });
+
+        if (relatedStoresCount > 0) {
+            return res.status(409).json({
+                success: false,
+                message: `Cannot delete category. ${relatedStoresCount} store(s) are using this category.`,
+                data: { relatedStoresCount }
+            });
+        }
+
+        // ✅ حذف مع التحقق من الوجود (محسّن)
+        const deletedCategory = await Category.findByIdAndDelete(id).lean();
+
+        if (!deletedCategory) {
+            return res.status(404).json({
+                success: false,
+                message: "Category not found",
+            });
+        }
 
         return res.status(200).json({
             success: true,
             message: "Category deleted successfully",
-            data: category,
         });
     } catch (error) {
-        return res.status(500).json({ success: false, message: "Server error", error });
+        console.error("deleteCategory error:", error);
+        return res.status(500).json({ 
+            success: false, 
+            message: "Server error",
+            ...(process.env.NODE_ENV === "development" && {
+                error: error instanceof Error ? error.message : 'Unknown error'
+            })
+        });
     }
 };
 
+// ✅ Toggle category status (دالة مشتركة)
+const toggleCategoryStatus = async (req: Request, res: Response, activeStatus: boolean) => {
+    try {
+        const { id } = req.params;
+
+        if (!isValidObjectId(id)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid category ID format",
+            });
+        }
+
+        // ✅ تحديث مع التحقق من الوجود بـ query واحد فقط (محسّن)
+        const updatedCategory = await Category.findByIdAndUpdate(
+            id,
+            { active: activeStatus },
+            { new: true, runValidators: true }
+        ).lean();
+
+        if (!updatedCategory) {
+            return res.status(404).json({
+                success: false,
+                message: "Category not found",
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: `Category ${activeStatus ? 'activated' : 'deactivated'} successfully`,
+            data: updatedCategory,
+        });
+    } catch (error) {
+        console.error(`${activeStatus ? 'activate' : 'deactivate'}Category error:`, error);
+        return res.status(500).json({
+            success: false,
+            message: "Server error",
+            ...(process.env.NODE_ENV === "development" && {
+                error: error instanceof Error ? error.message : 'Unknown error'
+            })
+        });
+    }
+}
+
+// ✅ Deactivate category
+export const deactivateCategory = async (req: Request, res: Response) => {
+    return toggleCategoryStatus(req, res, false);
+}
+
+// ✅ Activate category
+export const activateCategory = async (req: Request, res: Response) => {
+    return toggleCategoryStatus(req, res, true);
+}
