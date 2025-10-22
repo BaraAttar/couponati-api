@@ -1,13 +1,11 @@
 import type { Request, Response } from "express";
 import { Store } from "../../models/Store.model.js";
-import { Category } from "../../models/Category.model.js";
 import { isValidObjectId } from "mongoose";
 
 // ✅ Create new store 
 export const createStore = async (req: Request, res: Response) => {
     try {
         const { name, icon, banner, description, link, active, order, category } = req.body;
-
         // ✅ تحقق من الاسم
         if (!name || typeof name !== 'object' || !name.ar?.trim() || !name.en?.trim()) {
             return res.status(400).json({
@@ -24,7 +22,7 @@ export const createStore = async (req: Request, res: Response) => {
             });
         }
 
-        const categoryArray = Array.isArray(category) ? category : [category];
+        const categoryArray = Array.isArray(category) ? category : [category]
 
         // ✅ تحقق من صحة IDs
         for (const cat of categoryArray) {
@@ -34,25 +32,13 @@ export const createStore = async (req: Request, res: Response) => {
                     message: "Invalid category ID format",
                 });
             }
-        }
-
-        // ✅ تحقق من وجود كل الفئات بـ query واحد (محسّن)
-        const validCategories = await Category.find({
-            _id: { $in: categoryArray }
-        }).lean();
-
-        if (validCategories.length !== categoryArray.length) {
-            return res.status(404).json({
-                success: false,
-                message: "One or more categories not found",
-            });
-        }
+        };
 
         // ✅ تحقق من التكرار بـ query واحد (محسّن)
         const existingStore = await Store.findOne({
             $or: [
-                { 'name.ar': name.ar.trim(), category: { $in: categoryArray } },
-                { 'name.en': name.en.trim(), category: { $in: categoryArray } },
+                { 'name.ar': name.ar.trim() },
+                { 'name.en': name.en.trim() },
             ],
         }).lean();
 
@@ -162,16 +148,10 @@ export const updateStore = async (req: Request, res: Response) => {
                 }
             }
 
-            // ✅ تحقق من وجود كل الفئات بـ query واحد (محسّن)
-            const validCategories = await Category.find({
-                _id: { $in: categoryArray }
-            }).lean();
-
-            if (validCategories.length !== categoryArray.length) {
-                return res.status(404).json({ success: false, message: "One or more categories not found" });
-            }
-
-            updateData.category = categoryArray;
+            updateData.$addToSet = {
+                ...(updateData.$addToSet || {}),
+                category: { $each: categoryArray }
+            };
         }
 
         // ✅ باقي الحقول

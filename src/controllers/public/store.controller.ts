@@ -5,6 +5,7 @@ import { isValidObjectId } from "mongoose";
 // ✅ Get all stores
 export const getStores = async (req: Request, res: Response) => {
     try {
+        const lang = req.language || 'en';
         const page = parseInt((req.query.page as string) || "1");
         const limit = 20;
         const skipped = (page - 1) * limit;
@@ -36,13 +37,54 @@ export const getStores = async (req: Request, res: Response) => {
         const totalCount = await Store.countDocuments(filter);
         const remaining = Math.max(totalCount - skipped - limit, 0);
 
-        const stores = await Store.find(filter)
-            .populate('category', 'name')
-            .populate('coupons')
-            .skip((page - 1) * limit)
-            .limit(limit)
-            .sort({ order: 1, createdAt: -1 })
-            .lean();
+        const stores = await Store.aggregate([
+            { $match: filter },
+
+            // ✅ جلب بيانات الكوبونات بدل populate
+            {
+                $lookup: {
+                    from: 'coupons',
+                    localField: '_id',
+                    foreignField: 'store',
+                    as: 'coupons'
+                },
+            },
+
+            // ✅ اختيار اللغة حسب lang
+            {
+                $addFields: {
+                    name: `$name.${lang}`,
+                    description: `$description.${lang}`,
+                    // 'coupons.description': `$coupons.description.${lang}`
+                }
+            },
+
+            // ✅ اختيار اللغة لكل كوبون بداخل المتجر
+            {
+                $addFields: {
+                    coupons: {
+                        $map: {
+                            input: '$coupons',
+                            as: 'coupon',
+                            in: {
+                                $mergeObjects: [
+                                    '$$coupon',
+                                    { description: `$$coupon.description.${lang}` }
+                                ]
+                            }
+                        }
+                    }
+                }
+            },
+
+            // ✅ استثناء الفئة
+            { $project: { category: 0 } },
+
+            // ✅ الترتيب والتصفح
+            { $sort: { order: 1, createdAt: -1 } },
+            { $skip: (page - 1) * limit },
+            { $limit: limit },
+        ]);
 
         res.status(200).json({
             success: true,
