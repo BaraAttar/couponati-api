@@ -5,6 +5,7 @@ import { Store } from "../../models/Store.model.js";
 
 export const getUserFavourites = async (req: Request, res: Response) => {
     try {
+        const lang = req.language || 'en';
         const userId = req.user?.googleId;
 
         if (!userId) {
@@ -21,11 +22,11 @@ export const getUserFavourites = async (req: Request, res: Response) => {
                 match: { active: true },
                 select: 'name icon banner description coupons',
                 populate: [
-                    { path: 'category', select: 'name' },
-                    { path: 'coupons', select: 'code discount description' }
+                    // { path: 'category', select: 'name' },
+                    { path: 'coupons' }
                 ]
             })
-            .lean()
+            .lean();
 
         if (!user) {
             return res.status(404).json({
@@ -33,6 +34,18 @@ export const getUserFavourites = async (req: Request, res: Response) => {
                 message: "User not found",
             });
         }
+
+        user.favourites = (user.favourites as any[]).map((f: any) => ({
+            ...f,
+            name: f.name[lang],
+            description: f.description[lang],
+            coupons: (f.coupons as any[]).map((c: any) => ({
+                ...c,
+                description: c.description[lang],
+            })),
+        }));
+
+
 
         return res.status(200).json({
             success: true,

@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import { Store } from "../../models/Store.model.js";
-import { isValidObjectId } from "mongoose";
+import mongoose, { isValidObjectId } from "mongoose";
 
 // ✅ Get all stores
 export const getStores = async (req: Request, res: Response) => {
@@ -24,7 +24,9 @@ export const getStores = async (req: Request, res: Response) => {
                     message: "Invalid category ID format",
                 });
             }
-            filter.category = category;
+            // filter.category = category;
+            filter.category = { $in: [new mongoose.Types.ObjectId(category as string)] };
+
         }
 
         if (name && typeof name === 'string' && name.trim() !== '') {

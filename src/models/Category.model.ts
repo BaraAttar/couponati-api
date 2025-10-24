@@ -8,6 +8,7 @@ export interface Category extends Document {
     };
     active: boolean;
     order: number;
+    icon: string;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -20,6 +21,7 @@ const categorySchema = new Schema<Category>(
         },
         active: { type: Boolean, default: true },
         order: { type: Number, default: 0 },
+        icon: { type: String, required: true }
     },
     { timestamps: true }
 );
@@ -41,9 +43,9 @@ categorySchema.pre<Category>('save', async function (next) {
             // Using this.constructor to avoid issues
             const CategoryModel = this.constructor as any;
             const lastCategory = await CategoryModel.findOne()
-            .sort({ order: -1 })
-            .select('order')
-            .lean();
+                .sort({ order: -1 })
+                .select('order')
+                .lean();
 
             this.order = lastCategory ? lastCategory.order + 1 : 1;
             next();

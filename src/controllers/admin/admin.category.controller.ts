@@ -6,13 +6,20 @@ import { isValidObjectId } from "mongoose";
 // ✅ Create new category 
 export const createCategory = async (req: Request, res: Response) => {
     try {
-        const { name, active, order } = req.body;
+        const { name, active, order, icon } = req.body;
 
         // ✅ تحقق من الاسم
         if (!name || typeof name !== 'object' || !name.ar?.trim() || !name.en?.trim()) {
             return res.status(400).json({
                 success: false,
                 message: 'Category name in Arabic and English are both required.',
+            });
+        }
+
+        if (!icon) {
+            return res.status(400).json({
+                success: false,
+                message: 'Category icon is required.',
             });
         }
 
@@ -25,9 +32,9 @@ export const createCategory = async (req: Request, res: Response) => {
         }).lean();
 
         if (exists) {
-            return res.status(409).json({ 
-                success: false, 
-                message: "Category with this name already exists" 
+            return res.status(409).json({
+                success: false,
+                message: "Category with this name already exists"
             });
         }
 
@@ -38,7 +45,8 @@ export const createCategory = async (req: Request, res: Response) => {
                 en: name.en.trim(),
             },
             active: active ?? true,
-            order: order || 0
+            order: order || 0,
+            icon: icon || ''
         });
 
         const savedCategory = await category.save();
@@ -53,8 +61,8 @@ export const createCategory = async (req: Request, res: Response) => {
         });
     } catch (error) {
         console.error("createCategory error:", error);
-        return res.status(500).json({ 
-            success: false, 
+        return res.status(500).json({
+            success: false,
             message: "Server error",
             ...(process.env.NODE_ENV === "development" && {
                 error: error instanceof Error ? error.message : 'Unknown error'
@@ -71,6 +79,7 @@ interface UpdateCategoryBody {
     };
     active?: boolean;
     order?: number;
+    icon?: string;
 }
 
 export const updateCategory = async (req: Request<{ id: string }, {}, UpdateCategoryBody>, res: Response) => {
@@ -87,9 +96,9 @@ export const updateCategory = async (req: Request<{ id: string }, {}, UpdateCate
         // ✅ تحقق من وجود الفئة
         const existingCategory = await Category.findById(id).lean();
         if (!existingCategory) {
-            return res.status(404).json({ 
-                success: false, 
-                message: "Category not found" 
+            return res.status(404).json({
+                success: false,
+                message: "Category not found"
             });
         }
 
@@ -98,11 +107,11 @@ export const updateCategory = async (req: Request<{ id: string }, {}, UpdateCate
         // ✅ تحديث الاسم مع التحقق من التكرار
         if (req.body.name !== undefined) {
             const { ar, en } = req.body.name;
-            
+
             if (!ar?.trim() || !en?.trim()) {
-                return res.status(400).json({ 
-                    success: false, 
-                    message: "Both Arabic and English names are required." 
+                return res.status(400).json({
+                    success: false,
+                    message: "Both Arabic and English names are required."
                 });
             }
 
@@ -116,9 +125,9 @@ export const updateCategory = async (req: Request<{ id: string }, {}, UpdateCate
             }).lean();
 
             if (duplicate) {
-                return res.status(409).json({ 
-                    success: false, 
-                    message: "Category with this name already exists" 
+                return res.status(409).json({
+                    success: false,
+                    message: "Category with this name already exists"
                 });
             }
 
@@ -132,6 +141,9 @@ export const updateCategory = async (req: Request<{ id: string }, {}, UpdateCate
 
         if (req.body.order !== undefined) {
             updateData.order = req.body.order;
+        }
+        if (req.body.icon !== undefined) {
+            updateData.icon = req.body.icon;
         }
 
         // ✅ التحديث مع .lean() (محسّن)
@@ -147,8 +159,8 @@ export const updateCategory = async (req: Request<{ id: string }, {}, UpdateCate
         });
     } catch (error) {
         console.error("updateCategory error:", error);
-        return res.status(500).json({ 
-            success: false, 
+        return res.status(500).json({
+            success: false,
             message: "Server error",
             ...(process.env.NODE_ENV === "development" && {
                 error: error instanceof Error ? error.message : 'Unknown error'
@@ -177,7 +189,7 @@ export const deleteCategory = async (req: Request<{ id: string }, {}, DeleteCate
         // ✅ تحقق من كلمة التأكيد
         const normalizedConfirm = confirm?.trim().toLowerCase();
         const validConfirmations = ["delete", "حذف", "confirm"];
-        
+
         if (!validConfirmations.includes(normalizedConfirm)) {
             return res.status(400).json({
                 success: false,
@@ -186,8 +198,8 @@ export const deleteCategory = async (req: Request<{ id: string }, {}, DeleteCate
         }
 
         // ✅ تحقق من المتاجر المرتبطة (محسّن)
-        const relatedStoresCount = await Store.countDocuments({ 
-            category: id 
+        const relatedStoresCount = await Store.countDocuments({
+            category: id
         });
 
         if (relatedStoresCount > 0) {
@@ -214,8 +226,8 @@ export const deleteCategory = async (req: Request<{ id: string }, {}, DeleteCate
         });
     } catch (error) {
         console.error("deleteCategory error:", error);
-        return res.status(500).json({ 
-            success: false, 
+        return res.status(500).json({
+            success: false,
             message: "Server error",
             ...(process.env.NODE_ENV === "development" && {
                 error: error instanceof Error ? error.message : 'Unknown error'

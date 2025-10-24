@@ -5,6 +5,7 @@ import { User } from '../../models/User.model.js';
 
 export const googleLogin = async (req: Request, res: Response) => {
     const { idToken } = req.body
+    const lang = req.language || 'en';
     if (!idToken) return res.status(400).json({ error: 'No idToken provided' });
 
     try {
@@ -34,12 +35,21 @@ export const googleLogin = async (req: Request, res: Response) => {
                 lastName,
                 picture
             },
-            { new: true, upsert: true }
+            { new: true, upsert: true, setDefaultsOnInsert: true }
         ).populate({
             path: 'favourites',
             populate: { path: 'coupons' }
-        });
+        }).lean();
 
+        user.favourites = (user.favourites as any[]).map((f: any) => ({
+            ...f,
+            name: f.name[lang],
+            description: f.description[lang],
+            coupons: (f.coupons as any[]).map((c: any) => ({
+                ...c,
+                description: c.description[lang],
+            })),
+        }));
 
         const token = jwt.sign(
             { googleId, email, firstName, lastName, picture },
@@ -73,6 +83,7 @@ export const googleLogin = async (req: Request, res: Response) => {
 
 // TODO:
 export const verifyToken = async (req: Request, res: Response) => {
+    const lang = req.language || 'en';
     const tokenUser = req.user;
     if (!tokenUser) {
         return res.status(401).json({
@@ -81,31 +92,41 @@ export const verifyToken = async (req: Request, res: Response) => {
         })
     }
     try {
-        const dbUser = await User.findOne({ googleId: tokenUser.googleId })
+        const user = await User.findOne({ googleId: tokenUser.googleId })
             .populate({
                 path: 'favourites',
                 populate: { path: 'coupons' }
-            });
+            }).lean();
 
-        if (!dbUser) {
+        if (!user) {
             return res.status(404).json({
                 success: false,
                 message: "User not found in database"
             });
         }
 
+        user.favourites = (user.favourites as any[]).map((f: any) => ({
+            ...f,
+            name: f.name[lang],
+            description: f.description[lang],
+            coupons: (f.coupons as any[]).map((c: any) => ({
+                ...c,
+                description: c.description[lang],
+            })),
+        }));
+
         return res.status(200).json({
             success: true,
             message: "User retrieved successfully",
             data: {
                 user: {
-                    googleId: dbUser.googleId,
-                    email: dbUser.email,
-                    firstName: dbUser.firstName,
-                    lastName: dbUser.lastName,
-                    picture: dbUser.picture
+                    googleId: user.googleId,
+                    email: user.email,
+                    firstName: user.firstName,
+                    lastName: user.lastName,
+                    picture: user.picture
                 },
-                favourites: dbUser.favourites
+                favourites: user.favourites
             }
         });
     } catch (err) {

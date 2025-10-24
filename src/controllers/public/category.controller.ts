@@ -6,12 +6,19 @@ import { isValidObjectId } from "mongoose";
 // ✅ Get all categories 
 export const getCategories = async (req: Request, res: Response) => {
     try {
+        const lang = req.language || "en";
         const categories = await Category.find().sort({ order: 1 }).lean();
+
+        const categoriesLis = (categories as any[]).map((cat: any) => ({
+            ...cat,
+            name: cat.name[lang]?? cat.name,
+        }));
+
         return res.status(200).json({
             success: true,
             message: "Categories retrieved successfully",
-            count: categories.length,
-            data: categories,
+            count: categoriesLis.length,
+            data: categoriesLis,
         });
     } catch (error) {
         return res.status(500).json({ success: false, message: "Server error", error });
