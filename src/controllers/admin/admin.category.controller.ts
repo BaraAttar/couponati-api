@@ -1,14 +1,14 @@
 import type { Request, Response } from "express";
 import { Category } from "../../models/Category.model.js";
 import { Store } from "../../models/Store.model.js";
-import { isValidObjectId } from "mongoose";
+import mongoose, { isValidObjectId } from "mongoose";
 
-// ✅ Create new category 
+//  Create new category 
 export const createCategory = async (req: Request, res: Response) => {
     try {
         const { name, active, order, icon } = req.body;
 
-        // ✅ تحقق من الاسم
+        //  تحقق من الاسم
         if (!name || typeof name !== 'object' || !name.ar?.trim() || !name.en?.trim()) {
             return res.status(400).json({
                 success: false,
@@ -23,7 +23,7 @@ export const createCategory = async (req: Request, res: Response) => {
             });
         }
 
-        // ✅ تحقق من التكرار
+        //  تحقق من التكرار
         const exists = await Category.findOne({
             $or: [
                 { 'name.ar': name.ar.trim() },
@@ -51,7 +51,7 @@ export const createCategory = async (req: Request, res: Response) => {
 
         const savedCategory = await category.save();
 
-        // ✅ إرجاع البيانات مع .lean()
+        //  إرجاع البيانات مع .lean()
         const categoryData = await Category.findById(savedCategory._id).lean();
 
         return res.status(201).json({
@@ -71,7 +71,7 @@ export const createCategory = async (req: Request, res: Response) => {
     }
 };
 
-// ✅ Update category 
+//  Update category 
 interface UpdateCategoryBody {
     name?: {
         ar?: string;
@@ -93,7 +93,7 @@ export const updateCategory = async (req: Request<{ id: string }, {}, UpdateCate
             });
         }
 
-        // ✅ تحقق من وجود الفئة
+        //  تحقق من وجود الفئة
         const existingCategory = await Category.findById(id).lean();
         if (!existingCategory) {
             return res.status(404).json({
@@ -104,7 +104,7 @@ export const updateCategory = async (req: Request<{ id: string }, {}, UpdateCate
 
         const updateData: Partial<UpdateCategoryBody> = {};
 
-        // ✅ تحديث الاسم مع التحقق من التكرار
+        //  تحديث الاسم مع التحقق من التكرار
         if (req.body.name !== undefined) {
             const { ar, en } = req.body.name;
 
@@ -115,16 +115,27 @@ export const updateCategory = async (req: Request<{ id: string }, {}, UpdateCate
                 });
             }
 
-            // ✅ تحقق من التكرار (محسّن)
-            const duplicate = await Category.findOne({
-                $or: [
-                    { 'name.ar': ar.trim() },
-                    { 'name.en': en.trim() },
-                ],
-                _id: { $ne: id }
-            }).lean();
+            // تحقق من التكرار
+            const duplicate = await Category.aggregate([
+                {
+                    $match: {
+                        $and: [
+                            {
+                                $or: [
+                                    { 'name.ar': ar.trim() },
+                                    { 'name.en': en.trim() }
+                                ]
+                            },
+                            {
+                                _id: { $ne: new mongoose.Types.ObjectId(id) }
+                            }
+                        ]
+                    }
+                },
+                { $limit: 1 }
+            ]);
 
-            if (duplicate) {
+            if (duplicate.length > 0) {
                 return res.status(409).json({
                     success: false,
                     message: "Category with this name already exists"
@@ -134,7 +145,7 @@ export const updateCategory = async (req: Request<{ id: string }, {}, UpdateCate
             updateData.name = { ar: ar.trim(), en: en.trim() };
         }
 
-        // ✅ باقي الحقول
+        //  باقي الحقول
         if (req.body.active !== undefined) {
             updateData.active = req.body.active;
         }
@@ -146,7 +157,7 @@ export const updateCategory = async (req: Request<{ id: string }, {}, UpdateCate
             updateData.icon = req.body.icon;
         }
 
-        // ✅ التحديث مع .lean() (محسّن)
+        //  التحديث مع .lean() (محسّن)
         const category = await Category.findByIdAndUpdate(id, updateData, {
             new: true,
             runValidators: true,
@@ -169,7 +180,7 @@ export const updateCategory = async (req: Request<{ id: string }, {}, UpdateCate
     }
 };
 
-// ✅ Delete category 
+//  Delete category 
 interface DeleteCategoryBody {
     confirm: string
 }
@@ -186,7 +197,7 @@ export const deleteCategory = async (req: Request<{ id: string }, {}, DeleteCate
             });
         }
 
-        // ✅ تحقق من كلمة التأكيد
+        //  تحقق من كلمة التأكيد
         const normalizedConfirm = confirm?.trim().toLowerCase();
         const validConfirmations = ["delete", "حذف", "confirm"];
 
@@ -197,7 +208,7 @@ export const deleteCategory = async (req: Request<{ id: string }, {}, DeleteCate
             });
         }
 
-        // ✅ تحقق من المتاجر المرتبطة (محسّن)
+        //  تحقق من المتاجر المرتبطة (محسّن)
         const relatedStoresCount = await Store.countDocuments({
             category: id
         });
@@ -210,7 +221,7 @@ export const deleteCategory = async (req: Request<{ id: string }, {}, DeleteCate
             });
         }
 
-        // ✅ حذف مع التحقق من الوجود (محسّن)
+        //  حذف مع التحقق من الوجود (محسّن)
         const deletedCategory = await Category.findByIdAndDelete(id).lean();
 
         if (!deletedCategory) {
@@ -236,7 +247,7 @@ export const deleteCategory = async (req: Request<{ id: string }, {}, DeleteCate
     }
 };
 
-// ✅ Toggle category status (دالة مشتركة)
+//  Toggle category status (دالة مشتركة)
 const toggleCategoryStatus = async (req: Request, res: Response, activeStatus: boolean) => {
     try {
         const { id } = req.params;
@@ -248,7 +259,7 @@ const toggleCategoryStatus = async (req: Request, res: Response, activeStatus: b
             });
         }
 
-        // ✅ تحديث مع التحقق من الوجود بـ query واحد فقط (محسّن)
+        //  تحديث مع التحقق من الوجود بـ query واحد فقط (محسّن)
         const updatedCategory = await Category.findByIdAndUpdate(
             id,
             { active: activeStatus },
@@ -279,12 +290,12 @@ const toggleCategoryStatus = async (req: Request, res: Response, activeStatus: b
     }
 }
 
-// ✅ Deactivate category
+//  Deactivate category
 export const deactivateCategory = async (req: Request, res: Response) => {
     return toggleCategoryStatus(req, res, false);
 }
 
-// ✅ Activate category
+//  Activate category
 export const activateCategory = async (req: Request, res: Response) => {
     return toggleCategoryStatus(req, res, true);
 }
