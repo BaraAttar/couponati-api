@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import { Store } from "../../models/Store.model.js";
-import { isValidObjectId } from "mongoose";
+import mongoose, { isValidObjectId } from "mongoose";
 
 // ✅ Create new store 
 export const createStore = async (req: Request, res: Response) => {
@@ -110,24 +110,43 @@ export const updateStore = async (req: Request, res: Response) => {
 
         // ✅ تحديث الاسم
         if (name !== undefined) {
-            if (typeof name !== 'object' || !name.ar?.trim() || !name.en?.trim()) {
-                return res.status(400).json({ success: false, message: "Both Arabic and English names are required." });
+            // if (typeof name !== 'object' || !name.ar?.trim() || !name.en?.trim()) {
+            //     return res.status(400).json({ success: false, message: "Both Arabic and English names are required." });
+            // }
+
+            if (
+                typeof name !== 'object' ||
+                (
+                    (!name.ar || !name.ar.trim()) &&
+                    (!name.en || !name.en.trim())
+                )
+            ) {
+                return res.status(400).json({
+                    success: false,
+                    message: "At least one of Arabic or English names is required.",
+                });
             }
 
-            // ✅ تحديد الفئات المراد فحصها (الجديدة أو الحالية)
-            const categoriesToCheck = category
-                ? (Array.isArray(category) ? category : [category])
-                : existingStore.category;
+            const duplicate = await Store.aggregate([
+                {
+                    $match: {
+                        $and: [
+                            {
+                                $or: [
+                                    { 'name.ar': name.ar.trim() },
+                                    { 'name.en': name.en.trim() }
+                                ]
+                            },
+                            {
+                                _id: { $ne: new mongoose.Types.ObjectId(id) }
+                            }
+                        ]
+                    }
+                },
+                { $limit: 1 }
+            ]);
 
-            // ✅ تحقق من التكرار مع الفئات (محسّن)
-            const duplicate = await Store.findOne({
-                'name.ar': name.ar.trim(),
-                'name.en': name.en.trim(),
-                category: { $in: categoriesToCheck },
-                _id: { $ne: id }
-            }).lean();
-
-            if (duplicate) {
+            if (duplicate.length > 0) {
                 return res.status(409).json({ success: false, message: "Store name already exists in one of these categories." });
             }
 

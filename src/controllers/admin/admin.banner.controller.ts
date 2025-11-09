@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import { Banner } from "../../models/Banner.model.js";
-import { isValidObjectId } from "mongoose";
+import mongoose, { isValidObjectId } from "mongoose";
 
 interface BannerType {
     name: string;
@@ -48,7 +48,7 @@ export const createBanner = async (req: Request<{}, {}, BannerType>, res: Respon
         if (existingBanner) {
             return res.status(400).json({
                 success: false,
-                message: "Banner with this name already exists",
+                message: "Banner with this name or image already exists",
             });
         }
 
@@ -87,35 +87,33 @@ export const updateBanner = async (req: Request<{ id: string }, {}, UpdateBanner
         if (updateData.link) updateData.link = updateData.link.trim();
 
         // التحقق من صحة الـ URL إذا تم تحديث الصورة
-        if (updateData.image) {
-            if (!isValidUrl(updateData.image)) {
-                return res.status(400).json({
-                    success: false,
-                    message: "Please provide a valid image URL",
-                });
+        if (updateData.image || updateData.name) {
+            if (updateData.image) {
+                if (!isValidUrl(updateData.image)) {
+                    return res.status(400).json({
+                        success: false,
+                        message: "Please provide a valid image URL",
+                    });
+                }
             }
-            const existingBanner = await Banner.findOne({
-                image: updateData.image,
-                _id: { $ne: id }
-            }).lean();
-            if (existingBanner) {
-                return res.status(400).json({
-                    success: false,
-                    message: "Banner with this image already exists",
-                });
-            }
-        }
 
-        // التحقق من عدم تكرار الاسم (إذا تم تغييره)
-        if (updateData.name) {
-            const existingBanner = await Banner.findOne({
-                name: updateData.name,
-                _id: { $ne: id }
-            }).lean();
-            if (existingBanner) {
+            const existingBanner = await Banner.aggregate([
+                {
+                    $match: {
+                        $or: [
+                            { 'name': updateData?.name },
+                            { 'image': updateData.image }
+                        ],
+                        _id: { $ne: new mongoose.Types.ObjectId(id) }
+                    }
+                },
+                { $limit: 1 }
+            ]);
+
+            if (existingBanner.length > 0) {
                 return res.status(400).json({
                     success: false,
-                    message: "Banner with this name already exists",
+                    message: "Banner with this name or image already exists",
                 });
             }
         }

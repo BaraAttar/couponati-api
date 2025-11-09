@@ -85,6 +85,8 @@ interface UpdateCategoryBody {
 export const updateCategory = async (req: Request<{ id: string }, {}, UpdateCategoryBody>, res: Response) => {
     try {
         const { id } = req.params;
+        const { name } = req.body;
+
 
         if (!isValidObjectId(id)) {
             return res.status(400).json({
@@ -105,44 +107,68 @@ export const updateCategory = async (req: Request<{ id: string }, {}, UpdateCate
         const updateData: Partial<UpdateCategoryBody> = {};
 
         //  تحديث الاسم مع التحقق من التكرار
-        if (req.body.name !== undefined) {
-            const { ar, en } = req.body.name;
+        if (name !== undefined) {
 
-            if (!ar?.trim() || !en?.trim()) {
-                return res.status(400).json({
-                    success: false,
-                    message: "Both Arabic and English names are required."
-                });
-            }
+            // if (!name.ar?.trim() || !name.en?.trim()) {
+            //     return res.status(400).json({
+            //         success: false,
+            //         message: "Both Arabic and English names are required."
+            //     });
+            // }
 
-            // تحقق من التكرار
-            const duplicate = await Category.aggregate([
-                {
-                    $match: {
-                        $and: [
-                            {
-                                $or: [
-                                    { 'name.ar': ar.trim() },
-                                    { 'name.en': en.trim() }
-                                ]
+            if (name !== undefined) {
+                if (typeof name !== 'object') {
+                    return res.status(400).json({
+                        success: false,
+                        message: "Invalid name format.",
+                    });
+                }
+
+                const newName: any = {};
+                if (name.ar?.trim()) newName.ar = name.ar.trim();
+                if (name.en?.trim()) newName.en = name.en.trim();
+
+                // دمج الاسم القديم مع الجديد
+                const mergedName = {
+                    ar: newName.ar ?? existingCategory.name?.ar,
+                    en: newName.en ?? existingCategory.name?.en,
+                };
+
+                // ✅ تحقق بعد الدمج: لا يمكن أن تكون أي لغة فارغة
+                if (!mergedName.ar?.trim() || !mergedName.en?.trim()) {
+                    return res.status(400).json({
+                        success: false,
+                        message: "Both Arabic and English names must be filled (cannot be empty).",
+                    });
+                }
+
+                // تحقق من التكرار
+                const nameConditions = [];
+                if (newName.ar) nameConditions.push({ 'name.ar': newName.ar });
+                if (newName.en) nameConditions.push({ 'name.en': newName.en });
+
+                if (nameConditions.length > 0) {
+                    const duplicate = await Category.aggregate([
+                        {
+                            $match: {
+                                $or: nameConditions,
+                                _id: { $ne: new mongoose.Types.ObjectId(id) },
                             },
-                            {
-                                _id: { $ne: new mongoose.Types.ObjectId(id) }
-                            }
-                        ]
+
+                        },
+                        { $limit: 1 }
+                    ])
+
+                    if (duplicate.length > 0) {
+                        return res.status(409).json({
+                            success: false,
+                            message: "Category with this name already exists.",
+                        });
                     }
-                },
-                { $limit: 1 }
-            ]);
+                }
 
-            if (duplicate.length > 0) {
-                return res.status(409).json({
-                    success: false,
-                    message: "Category with this name already exists"
-                });
+                updateData.name = mergedName;
             }
-
-            updateData.name = { ar: ar.trim(), en: en.trim() };
         }
 
         //  باقي الحقول

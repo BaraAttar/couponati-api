@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import { Coupon } from "../../models/Coupon.model.js";
-import { isValidObjectId, Types } from "mongoose";
+import mongoose, { isValidObjectId, Types } from "mongoose";
 import { Store } from "../../models/Store.model.js";
 
 // أنواع البيانات القادمة من العميل
@@ -191,13 +191,18 @@ export const updateCoupon = async (req: Request<{ id: string }, {}, UpdateCoupon
             const storeToCheck = store || existingCoupon.store;
 
             // تحقق من التكرار 
-            const duplicate = await Coupon.findOne({
-                code: normalizedCode,
-                store: storeToCheck,
-                _id: { $ne: id }
-            }).lean();
+            const duplicate = await Coupon.aggregate([
+                {
+                    $match: {
+                        code: normalizedCode,
+                        store: storeToCheck,
+                        _id: { $ne: new mongoose.Types.ObjectId(id) }
+                    }
+                },
+                { $limit: 1 }
+            ]);
 
-            if (duplicate) {
+            if (duplicate.length > 0) {
                 return res.status(409).json({
                     success: false,
                     message: "Coupon code already exists for this store.",
