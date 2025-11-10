@@ -1,7 +1,7 @@
 import { Schema, model, Document, Types } from 'mongoose';
 
 export interface Banner extends Document {
-  _id: Types.ObjectId; 
+  _id: Types.ObjectId;
   name: string;
   image: string;
   link?: string;
@@ -42,5 +42,19 @@ const bannerSchema = new Schema<Banner>(
     timestamps: true,
   }
 );
+
+// auto-increment order
+bannerSchema.pre<Banner>('save', async function (next) {
+  if (!this.isNew || (this.order && this.order > 0)) return next();
+
+  try {
+    const BannerModel = this.constructor as typeof Banner;
+    const last = await BannerModel.findOne().sort({ order: -1 }).select('order').lean();
+    this.order = last ? last.order + 1 : 1;
+    next();
+  } catch (err) {
+    next(err as Error);
+  }
+});
 
 export const Banner = model<Banner>('Banner', bannerSchema);
