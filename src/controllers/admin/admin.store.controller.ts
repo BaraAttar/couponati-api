@@ -1,27 +1,12 @@
 import type { Request, Response } from "express";
 import { Store } from "../../models/Store.model.js";
 import mongoose, { isValidObjectId } from "mongoose";
+import type { CreateStoreInput, UpdateStoreInput } from "../../validations/admin/admin.store.validation.js";
 
 // ✅ Create new store 
-export const createStore = async (req: Request, res: Response) => {
+export const createStore = async (req: Request<{}, {}, CreateStoreInput>, res: Response) => {
     try {
         const { name, icon, banner, description, link, active, order, category } = req.body;
-        // ✅ تحقق من الاسم
-        if (!name || typeof name !== 'object' || !name.ar?.trim() || !name.en?.trim()) {
-            return res.status(400).json({
-                success: false,
-                message: 'Store name in Arabic and English are both required.',
-            });
-        }
-
-        // ✅ تحقق من الفئة
-        if (!category || (Array.isArray(category) && category.length === 0)) {
-            return res.status(400).json({
-                success: false,
-                message: 'At least one store category is required.',
-            });
-        }
-
         const categoryArray = Array.isArray(category) ? category : [category]
 
         // ✅ تحقق من صحة IDs
@@ -92,7 +77,7 @@ export const createStore = async (req: Request, res: Response) => {
 }
 
 // ✅ Update store 
-export const updateStore = async (req: Request, res: Response) => {
+export const updateStore = async (req: Request<{ id: string }, {}, UpdateStoreInput>, res: Response) => {
     try {
         const { id } = req.params;
         const { name, icon, banner, description, link, active, order, category } = req.body;
@@ -106,41 +91,32 @@ export const updateStore = async (req: Request, res: Response) => {
             return res.status(404).json({ success: false, message: "Store not found" });
         }
 
-        const updateData: any = {};
+        // const updateData: any = {};
+        const updateData: Partial<UpdateStoreInput> = {};
 
         // ✅ تحديث الاسم
         if (name !== undefined) {
-            // if (typeof name !== 'object' || !name.ar?.trim() || !name.en?.trim()) {
-            //     return res.status(400).json({ success: false, message: "Both Arabic and English names are required." });
-            // }
 
-            if (
-                typeof name !== 'object' ||
-                (
-                    (!name.ar || !name.ar.trim()) &&
-                    (!name.en || !name.en.trim())
-                )
-            ) {
-                return res.status(400).json({
-                    success: false,
-                    message: "At least one of Arabic or English names is required.",
-                });
-            }
+            const newName: any = {};
+            if (name.ar?.trim()) newName.ar = name.ar.trim();
+            if (name.en?.trim()) newName.en = name.en.trim();
+
+            // دمج الاسم القديم مع الجديد
+            const mergedName = {
+                ar: newName.ar ?? existingStore.name?.ar,
+                en: newName.en ?? existingStore.name?.en,
+            };
+
+            // تحقق من التكرار
+            const nameConditions = [];
+            if (newName.ar) nameConditions.push({ 'name.ar': newName.ar });
+            if (newName.en) nameConditions.push({ 'name.en': newName.en });
 
             const duplicate = await Store.aggregate([
                 {
                     $match: {
-                        $and: [
-                            {
-                                $or: [
-                                    { 'name.ar': name.ar.trim() },
-                                    { 'name.en': name.en.trim() }
-                                ]
-                            },
-                            {
-                                _id: { $ne: new mongoose.Types.ObjectId(id) }
-                            }
-                        ]
+                        $or: nameConditions,
+                        _id: { $ne: new mongoose.Types.ObjectId(id) }
                     }
                 },
                 { $limit: 1 }
@@ -150,10 +126,7 @@ export const updateStore = async (req: Request, res: Response) => {
                 return res.status(409).json({ success: false, message: "Store name already exists in one of these categories." });
             }
 
-            updateData.name = {
-                ar: name.ar.trim(),
-                en: name.en.trim(),
-            };
+            updateData.name = mergedName;
         }
 
         // ✅ تحديث التصنيفات
@@ -167,21 +140,23 @@ export const updateStore = async (req: Request, res: Response) => {
                 }
             }
 
-            updateData.$addToSet = {
-                ...(updateData.$addToSet || {}),
-                category: { $each: categoryArray }
-            };
+            updateData.category = Array.from(new Set([
+                ...existingStore.category.map(String),
+                ...categoryArray.map(String)
+            ])).map(id => id);
+
         }
 
         // ✅ باقي الحقول
-        if (icon !== undefined) updateData.icon = icon?.trim() || null;
-        if (banner !== undefined) updateData.banner = banner?.trim() || null;
+        if (icon !== undefined) updateData.icon = icon?.trim();
+
+        if (banner !== undefined) updateData.banner = banner?.trim();
         if (description !== undefined)
             updateData.description = {
                 ar: description?.ar?.trim() || '',
                 en: description?.en?.trim() || '',
             };
-        if (link !== undefined) updateData.link = link?.trim() || null;
+        if (link !== undefined) updateData.link = link?.trim();
         if (active !== undefined) updateData.active = active;
         if (order !== undefined) updateData.order = order;
 
@@ -207,12 +182,10 @@ export const updateStore = async (req: Request, res: Response) => {
     }
 };
 
-
 // ✅ Delete store
-export const deleteStore = async (req: Request, res: Response) => {
+export const deleteStore = async (req: Request<{ id: string }>, res: Response) => {
     try {
         const { id } = req.params;
-        const { confirm } = req.body;
 
         if (!isValidObjectId(id)) {
             return res.status(400).json({
@@ -221,16 +194,6 @@ export const deleteStore = async (req: Request, res: Response) => {
             });
         }
 
-        // ✅ تحقق من كلمة التأكيد
-        const validConfirmations = ["delete", "حذف", "confirm"];
-        if (!validConfirmations.includes(confirm?.toLowerCase().trim())) {
-            return res.status(400).json({
-                success: false,
-                message: "Please type 'delete' to confirm store deletion.",
-            });
-        }
-
-        // ✅ حذف مع التحقق من الوجود (محسّن)
         const deletedStore = await Store.findByIdAndDelete(id).lean();
 
         if (!deletedStore) {

@@ -2,26 +2,12 @@ import type { Request, Response } from "express";
 import { Category } from "../../models/Category.model.js";
 import { Store } from "../../models/Store.model.js";
 import mongoose, { isValidObjectId } from "mongoose";
+import type { CreateCategoryInput, UpdateCategoryInput } from "../../validations/admin/admin.category.validator.js";
 
 //  Create new category 
-export const createCategory = async (req: Request, res: Response) => {
+export const createCategory = async (req: Request<{}, {}, CreateCategoryInput>, res: Response) => {
     try {
         const { name, active, order, icon } = req.body;
-
-        //  تحقق من الاسم
-        if (!name || typeof name !== 'object' || !name.ar?.trim() || !name.en?.trim()) {
-            return res.status(400).json({
-                success: false,
-                message: 'Category name in Arabic and English are both required.',
-            });
-        }
-
-        if (!icon) {
-            return res.status(400).json({
-                success: false,
-                message: 'Category icon is required.',
-            });
-        }
 
         //  تحقق من التكرار
         const exists = await Category.findOne({
@@ -71,18 +57,7 @@ export const createCategory = async (req: Request, res: Response) => {
     }
 };
 
-//  Update category 
-interface UpdateCategoryBody {
-    name?: {
-        ar?: string;
-        en?: string;
-    };
-    active?: boolean;
-    order?: number;
-    icon?: string;
-}
-
-export const updateCategory = async (req: Request<{ id: string }, {}, UpdateCategoryBody>, res: Response) => {
+export const updateCategory = async (req: Request<{ id: string }, {}, UpdateCategoryInput>, res: Response) => {
     try {
         const { id } = req.params;
         const { name } = req.body;
@@ -104,71 +79,55 @@ export const updateCategory = async (req: Request<{ id: string }, {}, UpdateCate
             });
         }
 
-        const updateData: Partial<UpdateCategoryBody> = {};
+        const updateData: Partial<UpdateCategoryInput> = {};
 
         //  تحديث الاسم مع التحقق من التكرار
         if (name !== undefined) {
 
-            // if (!name.ar?.trim() || !name.en?.trim()) {
-            //     return res.status(400).json({
-            //         success: false,
-            //         message: "Both Arabic and English names are required."
-            //     });
-            // }
+            const newName: any = {};
+            if (name.ar?.trim()) newName.ar = name.ar.trim();
+            if (name.en?.trim()) newName.en = name.en.trim();
 
-            if (name !== undefined) {
-                if (typeof name !== 'object') {
-                    return res.status(400).json({
-                        success: false,
-                        message: "Invalid name format.",
-                    });
-                }
+            // دمج الاسم القديم مع الجديد
+            const mergedName = {
+                ar: newName.ar ?? existingCategory.name?.ar,
+                en: newName.en ?? existingCategory.name?.en,
+            };
 
-                const newName: any = {};
-                if (name.ar?.trim()) newName.ar = name.ar.trim();
-                if (name.en?.trim()) newName.en = name.en.trim();
-
-                // دمج الاسم القديم مع الجديد
-                const mergedName = {
-                    ar: newName.ar ?? existingCategory.name?.ar,
-                    en: newName.en ?? existingCategory.name?.en,
-                };
-
-                // ✅ تحقق بعد الدمج: لا يمكن أن تكون أي لغة فارغة
-                if (!mergedName.ar?.trim() || !mergedName.en?.trim()) {
-                    return res.status(400).json({
-                        success: false,
-                        message: "Both Arabic and English names must be filled (cannot be empty).",
-                    });
-                }
-
-                // تحقق من التكرار
-                const nameConditions = [];
-                if (newName.ar) nameConditions.push({ 'name.ar': newName.ar });
-                if (newName.en) nameConditions.push({ 'name.en': newName.en });
-
-                if (nameConditions.length > 0) {
-                    const duplicate = await Category.aggregate([
-                        {
-                            $match: {
-                                $or: nameConditions,
-                                _id: { $ne: new mongoose.Types.ObjectId(id) },
-                            },
-
-                        },
-                        { $limit: 1 }
-                    ])
-
-                    if (duplicate.length > 0) {
-                        return res.status(409).json({
-                            success: false,
-                            message: "Category with this name already exists.",
-                        });
-                    }
-                }
-
-                updateData.name = mergedName;
+            // ✅ تحقق بعد الدمج: لا يمكن أن تكون أي لغة فارغة
+            if (!mergedName.ar?.trim() || !mergedName.en?.trim()) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Both Arabic and English names must be filled (cannot be empty).",
+                });
             }
+
+            // تحقق من التكرار
+            const nameConditions = [];
+            if (newName.ar) nameConditions.push({ 'name.ar': newName.ar });
+            if (newName.en) nameConditions.push({ 'name.en': newName.en });
+
+            if (nameConditions.length > 0) {
+                const duplicate = await Category.aggregate([
+                    {
+                        $match: {
+                            $or: nameConditions,
+                            _id: { $ne: new mongoose.Types.ObjectId(id) },
+                        },
+
+                    },
+                    { $limit: 1 }
+                ])
+
+                if (duplicate.length > 0) {
+                    return res.status(409).json({
+                        success: false,
+                        message: "Category with this name already exists.",
+                    });
+                }
+            }
+
+            updateData.name = mergedName;
         }
 
         //  باقي الحقول
@@ -183,7 +142,6 @@ export const updateCategory = async (req: Request<{ id: string }, {}, UpdateCate
             updateData.icon = req.body.icon;
         }
 
-        //  التحديث مع .lean() (محسّن)
         const category = await Category.findByIdAndUpdate(id, updateData, {
             new: true,
             runValidators: true,
@@ -206,15 +164,9 @@ export const updateCategory = async (req: Request<{ id: string }, {}, UpdateCate
     }
 };
 
-//  Delete category 
-interface DeleteCategoryBody {
-    confirm: string
-}
-
-export const deleteCategory = async (req: Request<{ id: string }, {}, DeleteCategoryBody>, res: Response) => {
+export const deleteCategory = async (req: Request<{ id: string }>, res: Response) => {
     try {
         const { id } = req.params;
-        const { confirm } = req.body;
 
         if (!isValidObjectId(id)) {
             return res.status(400).json({
@@ -223,18 +175,7 @@ export const deleteCategory = async (req: Request<{ id: string }, {}, DeleteCate
             });
         }
 
-        //  تحقق من كلمة التأكيد
-        const normalizedConfirm = confirm?.trim().toLowerCase();
-        const validConfirmations = ["delete", "حذف", "confirm"];
-
-        if (!validConfirmations.includes(normalizedConfirm)) {
-            return res.status(400).json({
-                success: false,
-                message: "Please type 'delete' or 'حذف' to confirm category deletion.",
-            });
-        }
-
-        //  تحقق من المتاجر المرتبطة (محسّن)
+        // تحقق من المتاجر المرتبطة
         const relatedStoresCount = await Store.countDocuments({
             category: id
         });

@@ -2,6 +2,7 @@ import type { Request, Response } from "express"
 import { Admin } from "../../models/Admin.model.js";
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
+import type { CreateAdminInput } from "../../validations/admin/admin.auth.validation.js";
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_EXPIRES_IN = "1d";
@@ -10,7 +11,7 @@ if (!JWT_SECRET) {
     throw new Error("FATAL ERROR: JWT_SECRET is not defined in environment variables");
 }
 
-export const adminSignup = async (req: Request, res: Response) => {
+export const adminSignup = async (req: Request<{}, {}, CreateAdminInput>, res: Response) => {
     try {
         const { userName, password } = req.body
 

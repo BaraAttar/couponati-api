@@ -27,10 +27,6 @@ interface UpdateCouponBody {
     store?: string;
 }
 
-interface DeleteCouponBody {
-    confirm: string;
-}
-
 // إنشاء كوبون جديد
 export const createCoupon = async (req: Request<{}, {}, CreateCouponBody>, res: Response) => {
     try {
@@ -312,26 +308,14 @@ export const updateCoupon = async (req: Request<{ id: string }, {}, UpdateCoupon
 };
 
 // حذف كوبون
-export const deleteCoupon = async (req: Request<{ id: string }, {}, DeleteCouponBody>, res: Response) => {
+export const deleteCoupon = async (req: Request<{ id: string }>, res: Response) => {
     try {
         const { id } = req.params;
-        const { confirm } = req.body;
 
         if (!isValidObjectId(id)) {
             return res.status(400).json({
                 success: false,
                 message: "Invalid coupon ID format.",
-            });
-        }
-
-        // تحقق من كلمة التأكيد
-        const normalizedConfirm = confirm?.trim().toLowerCase();
-        const validConfirmations = ["delete", "حذف", "confirm"];
-
-        if (!validConfirmations.includes(normalizedConfirm)) {
-            return res.status(400).json({
-                success: false,
-                message: "Please type 'delete' or 'حذف' to confirm coupon deletion.",
             });
         }
 

@@ -20,6 +20,7 @@ const adminSchema = new Schema<Admin>(
         password: {
             type: String,
             required: [true, 'Password is required'],
+            minlength: [8, 'User name must be at least 8 character long'],
             select: false
         },
         role: {

@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import { Banner } from "../../models/Banner.model.js";
 import mongoose, { isValidObjectId } from "mongoose";
+import type { CreateBannerInput, UpdateBannerInput } from "../../validations/admin/admin.banner.validation.js";
 
 interface BannerType {
     name: string;
@@ -21,16 +22,9 @@ interface UpdateBannerBody {
 }
 
 
-export const createBanner = async (req: Request<{}, {}, BannerType>, res: Response) => {
+export const createBanner = async (req: Request<{}, {}, CreateBannerInput>, res: Response) => {
     try {
         const { name, image } = req.body;
-
-        if (!req.body || !req.body.name || !req.body.image) {
-            return res.status(400).json({
-                success: false,
-                message: "name and image url is required",
-            });
-        }
 
         if (image && !isValidUrl(image)) {
             return res.status(400).json({
@@ -73,7 +67,7 @@ export const createBanner = async (req: Request<{}, {}, BannerType>, res: Respon
     }
 }
 
-export const updateBanner = async (req: Request<{ id: string }, {}, UpdateBannerBody>, res: Response) => {
+export const updateBanner = async (req: Request<{ id: string }, {}, UpdateBannerInput>, res: Response) => {
     try {
         const { id } = req.params;
         const updateData = req.body;
