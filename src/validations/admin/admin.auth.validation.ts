@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { sanitizedTextSchema } from "../shared/validation.utils.js";
 
 // Password validation with security requirements
 const passwordSchema = z
@@ -50,8 +51,8 @@ export const createAdminSchema = z.object({
 
 // Login schema (less strict for login)
 export const loginAdminSchema = z.object({
-    userName: z.string().min(1, "Username is required").trim(),
-    password: z.string().min(1, "Password is required"),
+    userName: sanitizedTextSchema(1, 30, "Username"),
+    password: sanitizedTextSchema(1, 30, "Password"),
 });
 
 export type CreateAdminInput = z.infer<typeof createAdminSchema>;

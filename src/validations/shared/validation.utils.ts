@@ -14,6 +14,10 @@ export const sanitizedTextSchema = (
         .max(maxLength, `${fieldName} cannot exceed ${maxLength} characters`)
         .refine(
             (text) => {
+                // Block dangerous characters outright
+                const forbiddenChars = /[{}$`<>]/;
+                if (forbiddenChars.test(text)) return false;
+
                 // Remove dangerous HTML tags and scripts
                 const dangerousPatterns = [
                     /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi,
