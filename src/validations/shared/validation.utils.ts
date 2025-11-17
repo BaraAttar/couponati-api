@@ -1,5 +1,6 @@
 // src/validations/shared/validation.utils.ts
 import { z } from "zod";
+import mongoose from "mongoose";
 
 // Sanitized text schema with XSS protection
 export const sanitizedTextSchema = (

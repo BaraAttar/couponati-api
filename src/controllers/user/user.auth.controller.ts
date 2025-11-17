@@ -2,8 +2,9 @@ import type { Request, Response } from "express";
 import { verifyGoogleToken } from '../../services/google.service.js';
 import jwt from "jsonwebtoken";
 import { User } from '../../models/User.model.js';
+import type { GoogleTokenInput } from "../../validations/user/user.auth.validation.js";
 
-export const googleLogin = async (req: Request, res: Response) => {
+export const googleLogin = async (req: Request<{}, {}, GoogleTokenInput>, res: Response) => {
     const { idToken } = req.body
     const lang = req.language || 'en';
     if (!idToken) return res.status(400).json({ error: 'No idToken provided' });
@@ -81,18 +82,17 @@ export const googleLogin = async (req: Request, res: Response) => {
     }
 };
 
-// TODO:
 export const verifyToken = async (req: Request, res: Response) => {
     const lang = req.language || 'en';
-    const tokenUser = req.user;
-    if (!tokenUser) {
+    const userToken = req.user;
+    if (!userToken) {
         return res.status(401).json({
             success: false,
             message: "Unauthorized: user payload required"
         })
     }
     try {
-        const user = await User.findOne({ googleId: tokenUser.googleId })
+        const user = await User.findOne({ googleId: userToken.googleId })
             .populate({
                 path: 'favourites',
                 populate: { path: 'coupons' }

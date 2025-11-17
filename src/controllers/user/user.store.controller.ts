@@ -2,18 +2,12 @@ import type { Request, Response } from "express";
 import { isValidObjectId } from "mongoose";
 import { User } from "../../models/User.model.js";
 import { Store } from "../../models/Store.model.js";
+import type { AddFavouriteBodyInput, RemoveFavouriteParamsInput } from "../../validations/user/user.store.validation.js";
 
 export const getUserFavourites = async (req: Request, res: Response) => {
     try {
         const lang = req.language || 'en';
         const userId = req.user?.googleId;
-
-        if (!userId) {
-            return res.status(401).json({
-                success: false,
-                message: "Unauthorized",
-            });
-        }
 
         const user = await User.findOne({ googleId: userId })
             .select('favourites')
@@ -62,24 +56,10 @@ export const getUserFavourites = async (req: Request, res: Response) => {
     }
 };
 
-export const addToFavourites = async (req: Request, res: Response) => {
+export const addToFavourites = async (req: Request<{}, {}, AddFavouriteBodyInput>, res: Response) => {
     try {
         const { storeId } = req.body;
         const userId = req.user?.googleId;
-
-        if (!userId) {
-            return res.status(401).json({
-                success: false,
-                message: "Unauthorized",
-            });
-        }
-
-        if (!storeId || !isValidObjectId(storeId)) {
-            return res.status(400).json({
-                success: false,
-                message: "Valid store ID is required",
-            });
-        }
 
         // التحقق من وجود المتجر وأنه نشط
         const store = await Store.findOne({ _id: storeId, active: true }).lean();
@@ -126,24 +106,10 @@ export const addToFavourites = async (req: Request, res: Response) => {
     }
 };
 
-export const removeFromFavourites = async (req: Request, res: Response) => {
+export const removeFromFavourites = async (req: Request<RemoveFavouriteParamsInput>, res: Response) => {
     try {
         const { storeId } = req.params;
         const userId = req.user?.googleId;
-
-        if (!userId) {
-            return res.status(401).json({
-                success: false,
-                message: "Unauthorized",
-            });
-        }
-
-        if (!isValidObjectId(storeId)) {
-            return res.status(400).json({
-                success: false,
-                message: "Invalid store ID format",
-            });
-        }
 
         const user = await User.findOne({ googleId: userId });
         if (!user) {

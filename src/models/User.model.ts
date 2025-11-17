@@ -10,7 +10,7 @@ export interface User extends Document {
     age?: number;
     picture?: String;
     gender?: 'male' | 'female' | 'other';
-    favourites: Types.ObjectId[];
+    favourites: Array<string | Types.ObjectId>;
     role: 'user';
 }
 
