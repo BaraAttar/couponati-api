@@ -37,12 +37,13 @@ export const sanitizedTextSchema = (
 // URL validation with protocol check
 export const urlSchema = z
     .url("Must be a valid URL")
-    .trim()
+    .nullable()
     .refine(
         (url) => {
+            if (!url) return true; // null مسموح
             try {
                 const parsedUrl = new URL(url);
-                return ['http:', 'https:'].includes(parsedUrl.protocol);
+                return ["http:", "https:"].includes(parsedUrl.protocol);
             } catch {
                 return false;
             }
