@@ -3,40 +3,14 @@ import { Banner } from "../../models/Banner.model.js";
 import mongoose, { isValidObjectId } from "mongoose";
 import type { CreateBannerInput, UpdateBannerInput } from "../../validations/admin/admin.banner.validation.js";
 
-interface BannerType {
-    name: string;
-    image: string;
-    link?: string;
-    active: boolean;
-    order: number;
-    createdAt: Date;
-    updatedAt: Date;
-}
-
-interface UpdateBannerBody {
-    name?: string;
-    image?: string;
-    link?: string;
-    active?: boolean;
-    order?: number;
-}
-
-
 export const createBanner = async (req: Request<{}, {}, CreateBannerInput>, res: Response) => {
     try {
         const { name, image } = req.body;
 
-        if (image && !isValidUrl(image)) {
-            return res.status(400).json({
-                success: false,
-                message: "Please provide a valid image URL",
-            });
-        }
-
         const existingBanner = await Banner.findOne({
             $or: [
                 { name: name.trim() },
-                { image: image.trim() }
+                { image: image?.trim() }
             ]
         }).lean();
         if (existingBanner) {
