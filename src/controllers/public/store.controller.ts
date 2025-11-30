@@ -7,7 +7,7 @@ export const getStores = async (req: Request, res: Response) => {
     try {
         const lang = req.language || 'en';
         const page = parseInt((req.query.page as string) || "1");
-        const limit = 20;
+        const limit = Number(req.query.limit) || 20;
         const skipped = (page - 1) * limit;
 
         const { active, category, name } = req.query;
@@ -35,9 +35,6 @@ export const getStores = async (req: Request, res: Response) => {
                 { 'name.en': new RegExp(name.trim(), 'i') }
             ];
         }
-
-        const totalCount = await Store.countDocuments(filter);
-        const remaining = Math.max(totalCount - skipped - limit, 0);
 
         const stores = await Store.aggregate([
             { $match: filter },
@@ -88,13 +85,18 @@ export const getStores = async (req: Request, res: Response) => {
             { $limit: limit },
         ]);
 
+        const totalCount = await Store.countDocuments(filter);
+        const remainingPages = Math.max(Math.ceil((totalCount - skipped - stores.length) / limit), 0);
+
         res.status(200).json({
             success: true,
             message: stores.length > 0 ? "Stores retrieved successfully" : "No stores found",
             data: stores,
-            pageCount: stores.length,
-            totalCount,
-            remaining
+            pagination: {
+                page,
+                totalCount,
+                remainingPages
+            }
         });
     } catch (error) {
         console.error("getStores error:", error);

@@ -3,13 +3,12 @@ import { createCategory, deleteCategory, updateCategory } from "../../controller
 import { adminAuthMiddleware } from '../../middleware/auth.js';
 import { validateBody } from "../../middleware/validateBody.js";
 import { createCategorySchema, updateCategorySchema } from "../../validations/admin/admin.category.validator.js";
-import { deleteConfirmBody } from "../../validations/admin/admin.delete-body.validation.js";
 const router = express.Router();
 
 router.use(adminAuthMiddleware);
 
 router.post("/", validateBody(createCategorySchema), createCategory)
 router.put("/:id", validateBody(updateCategorySchema), updateCategory)
-router.delete("/:id", validateBody(deleteConfirmBody), deleteCategory)
+router.delete("/:id", deleteCategory)
 
 export default router;

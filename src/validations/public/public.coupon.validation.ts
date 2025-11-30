@@ -6,4 +6,9 @@ export const searchCouponsSchema = z.object({
     active: z.enum(["true", "false"]).optional(),
 });
 
+export const searchCouponsByIdSchema = z.object({
+    id: z
+        .string()
+});
+
 export type SearchCouponsQuery = z.infer<typeof searchCouponsSchema>;
