@@ -18,7 +18,6 @@ export const googleLogin = async (req: Request<{}, {}, GoogleTokenInput>, res: R
             });
         }
 
-        // console.log(payload)
         const googleId = payload.sub;
         const email = payload.email;
         const firstName = payload.given_name;

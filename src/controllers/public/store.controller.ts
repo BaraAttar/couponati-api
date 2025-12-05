@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import { Store } from "../../models/Store.model.js";
 import mongoose, { isValidObjectId } from "mongoose";
+import { Coupon } from "../../models/Coupon.model.js";
 
 // ✅ Get all stores
 export const getStores = async (req: Request, res: Response) => {
@@ -130,10 +131,15 @@ export const getStoreById = async (req: Request, res: Response) => {
             });
         }
 
+        const couponsCount = await Coupon.countDocuments({ store: id });
+
         return res.status(200).json({
             success: true,
             message: "Store retrieved successfully",
-            data: store,
+            data: {
+                ...store,
+                couponsCount
+            },
         });
     } catch (error) {
         console.error("getStoreById error:", error);

@@ -44,8 +44,6 @@ export const getCouponsByStoreId = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
 
-        console.log(id);
-
         const coupons = await Coupon.find({ store: new mongoose.Types.ObjectId(id) }).sort({ usedCount: -1 }).lean();
 
         return res.status(200).json({
@@ -63,3 +61,31 @@ export const getCouponsByStoreId = async (req: Request, res: Response) => {
         });
     }
 }
+export const getCouponById = async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+
+        const coupon = await Coupon.findById(id).lean();
+
+        if (!coupon) {
+            return res.status(404).json({
+                success: false,
+                message: "No Coupon found with this id",
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: "Coupons retrieved successfully",
+            data: coupon,
+        });
+    } catch (error) {
+        console.error("getCoupons error:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Server error",
+            error: process.env.NODE_ENV === "development" ? error : undefined,
+        });
+    }
+}
+
