@@ -58,6 +58,7 @@ export const optionalUrlSchema = z
     .string()
     .trim()
     .optional()
+    .nullable()
     .refine(
         (url) => {
             if (!url || url === '') return true;

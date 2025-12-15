@@ -11,7 +11,7 @@ export const createBannerSchema = z.object({
 
 export const updateBannerSchema = z.object({
     name: sanitizedTextSchema(2, 100, "Banner name").optional(),
-    image: urlSchema.optional(),
+    image: urlSchema,
     link: optionalUrlSchema,
     active: z.boolean().default(true),
     order: z.number().int().nonnegative().default(0),

@@ -3,15 +3,39 @@ import { Category } from "../../models/Category.model.js";
 import { isValidObjectId } from "mongoose";
 
 
-// ✅ Get all categories 
+// Get all categories 
 export const getCategories = async (req: Request, res: Response) => {
     try {
         const lang = req.language || "en";
-        const categories = await Category.find().sort({ order: 1 }).lean();
+
+        const categories = await Category.aggregate([
+            { $sort: { order: 1 } },
+
+            {
+                $lookup: {
+                    from: "stores",
+                    localField: "_id",
+                    foreignField: "category",
+                    as: "stores"
+                }
+            },
+
+            {
+                $addFields: {
+                    storesCount: { $size: "$stores" }
+                }
+            },
+
+            {
+                $project: {
+                    stores: 0
+                }
+            }
+        ]);
 
         const categoriesLis = (categories as any[]).map((cat: any) => ({
             ...cat,
-            name: cat.name[lang]?? cat.name,
+            name: cat.name[lang] ?? cat.name,
         }));
 
         return res.status(200).json({
@@ -25,7 +49,7 @@ export const getCategories = async (req: Request, res: Response) => {
     }
 };
 
-// ✅ Get single category 
+// Get single category 
 export const getCategoryById = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;

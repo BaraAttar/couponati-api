@@ -27,6 +27,10 @@ import couponRoutes from "./routes/public/coupon.routes.js"
 // 🟢 User Routes (Protected)
 import userStoreRoutes from "./routes/user/user.store.routes.js"
 
+// Reports & Analytics Routes
+import adminReportRoutes from "./routes/admin/admin.report.routes.js";
+import analyticsRoutes from "./routes/public/analytics.routes.js";
+
 // VARIABLES
 const port = process.env.PORT || 3000;
 const app = express();
@@ -58,12 +62,15 @@ app.use("/admin/banner", adminBannerRoutes);
 app.use("/admin/category", adminCategoryRoutes);
 app.use("/admin/store", adminStoreRoutes);
 app.use("/admin/coupon", adminCouponRoutes);
+app.use("/admin/report", adminReportRoutes);
 
 // 🌐 Public Routes (General Access)
 app.use("/banner", bannerRoutes);
 app.use("/category", categoryRoutes);
 app.use("/store", storeRoutes);
 app.use("/coupon", couponRoutes);
+app.use("/analytics", analyticsRoutes);
+
 
 // 🟢 User Routes (Protected)
 app.use("/user/store", userStoreRoutes);

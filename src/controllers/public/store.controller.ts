@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 import { Store } from "../../models/Store.model.js";
 import mongoose, { isValidObjectId } from "mongoose";
 import { Coupon } from "../../models/Coupon.model.js";
+import { trackEvent } from "../../services/analytics.service.js";
 
 // ✅ Get all stores
 export const getStores = async (req: Request, res: Response) => {
@@ -131,6 +132,7 @@ export const getStoreById = async (req: Request, res: Response) => {
             });
         }
 
+        trackEvent(id as string, 'Store', 'view').catch(console.error);
         const couponsCount = await Coupon.countDocuments({ store: id });
 
         return res.status(200).json({
