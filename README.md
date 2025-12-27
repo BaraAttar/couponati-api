@@ -29,17 +29,17 @@ A bilingual (Arabic/English) Backend system for managing stores, coupons, and re
     ```
 3.  **Run:** `npm run dev` (Development) or `npm start` (Production).
 
-## 📂 API Architecture
-*   **`/auth`**: User Google login & token verification.
-*   **`/admin`**: Protected dashboard routes (Reports, CRUD Stores/Coupons/Categories).
-*   **`/public`**: General access for Banners, Stores, and Coupons.
-*   **`/user`**: Protected user actions (Favourites management).
-*   **`/analytics`**: Event tracking for user interactions.
+## 📂 API Architecture (Endpoints)
+*   **Auth:** `/auth` (User Google login) & `/admin/auth` (Admin login).
+*   **Public:** `/store`, `/coupon`, `/category`, `/banner` (General access).
+*   **User:** `/user/store` (Protected favorites management).
+*   **Admin:** `/admin/store`, `/admin/coupon`, `/admin/category`, `/admin/report`.
+*   **Analytics:** `/analytics/track` (Event tracking).
 
 ## 🛡️ Security Highlights
-*   **Rate Limiting:** Prevents brute-force on auth routes (5 attempts/5 mins).
-*   **Sanitization:** Custom middleware strips dangerous HTML/scripts from all inputs.
-*   **Integrity:** Automatic display order (`order`) and expiry date validation.
+*   **Rate Limiting:** General API (200 req/min) | Auth (5 attempts/5 mins).
+*   **XSS Protection:** Custom Zod middleware sanitizes all incoming text data.
+*   **Data Integrity:** Automated display ordering and linked-entity deletion protection.
 
 ---
 **Couponati API - Efficient. Secure. Bilingual.**
